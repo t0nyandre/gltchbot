@@ -1,0 +1,27 @@
+# ---- Build Stage ----
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Download dependencies first (layer caching)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source and build
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bot ./cmd/bot
+
+# ---- Runtime Stage ----
+FROM alpine:3.21
+
+WORKDIR /app
+
+# ca-certificates needed for Discord TLS connections
+RUN apk add --no-cache ca-certificates tzdata
+
+COPY --from=builder /bot /app/bot
+
+ENTRYPOINT ["/app/bot"]

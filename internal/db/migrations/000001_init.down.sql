@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS guild_modules;
+DROP TABLE IF EXISTS modules;
+DROP TABLE IF EXISTS guilds;

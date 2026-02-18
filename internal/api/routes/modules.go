@@ -1,0 +1,83 @@
+package routes
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/t0nyandre/gltchbot/internal/bot/modules"
+	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+)
+
+// ModuleHandler handles module-related API routes.
+type ModuleHandler struct {
+	queries  *dbsqlc.Queries
+	registry *modules.Registry
+}
+
+// NewModuleHandler creates a new ModuleHandler.
+func NewModuleHandler(queries *dbsqlc.Queries, registry *modules.Registry) *ModuleHandler {
+	return &ModuleHandler{
+		queries:  queries,
+		registry: registry,
+	}
+}
+
+// ListGuildModules returns all modules with their enabled status for a guild.
+// GET /api/guilds/{guildId}/modules
+func (h *ModuleHandler) ListGuildModules(w http.ResponseWriter, r *http.Request) {
+	guildID := r.PathValue("guildId")
+	mods, err := h.queries.ListGuildModules(r.Context(), guildID)
+	if err != nil {
+		jsonError(w, "failed to fetch modules", http.StatusInternalServerError)
+		return
+	}
+	jsonOK(w, mods)
+}
+
+// GetGuildModule returns a single module's status for a guild.
+// GET /api/guilds/{guildId}/modules/{moduleName}
+func (h *ModuleHandler) GetGuildModule(w http.ResponseWriter, r *http.Request) {
+	guildID := r.PathValue("guildId")
+	moduleName := r.PathValue("moduleName")
+
+	mod, err := h.queries.GetGuildModule(r.Context(), dbsqlc.GetGuildModuleParams{
+		GuildID: guildID,
+		Name:    moduleName,
+	})
+	if err != nil {
+		jsonError(w, "module not found", http.StatusNotFound)
+		return
+	}
+	jsonOK(w, mod)
+}
+
+// UpdateGuildModule enables or disables a module for a guild.
+// PATCH /api/guilds/{guildId}/modules/{moduleName}
+func (h *ModuleHandler) UpdateGuildModule(w http.ResponseWriter, r *http.Request) {
+	guildID := r.PathValue("guildId")
+	moduleName := r.PathValue("moduleName")
+
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+
+	if body.Enabled {
+		if err := h.registry.EnableForGuild(ctx, moduleName, guildID); err != nil {
+			jsonError(w, "failed to enable module: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		if err := h.registry.DisableForGuild(ctx, moduleName, guildID); err != nil {
+			jsonError(w, "failed to disable module: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	jsonOK(w, map[string]any{"guild_id": guildID, "module": moduleName, "enabled": body.Enabled})
+}
