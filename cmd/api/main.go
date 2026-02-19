@@ -11,6 +11,9 @@ import (
 
 	"github.com/t0nyandre/gltchbot/internal/api"
 	"github.com/t0nyandre/gltchbot/internal/bot/modules"
+	"github.com/t0nyandre/gltchbot/internal/bot/modules/autorole"
+	"github.com/t0nyandre/gltchbot/internal/bot/modules/jointocreate"
+	"github.com/t0nyandre/gltchbot/internal/bot/modules/reactionroles"
 	"github.com/t0nyandre/gltchbot/internal/config"
 	"github.com/t0nyandre/gltchbot/internal/db"
 )
@@ -33,6 +36,11 @@ func main() {
 
 	// Create a registry without a session (API only needs DB access for module management)
 	registry := modules.NewRegistry(pool)
+
+	// Register all available modules (same as in the bot)
+	registry.Register(jointocreate.New(pool))
+	registry.Register(reactionroles.New(pool))
+	registry.Register(autorole.New(pool))
 
 	// Create and start the API server
 	server := api.New(cfg, pool, registry)

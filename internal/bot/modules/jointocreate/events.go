@@ -118,23 +118,58 @@ func (m *JoinToCreate) handleChannelDelete(s *discordgo.Session, cd *discordgo.C
 	}
 }
 
+// countUsersInChannel returns the number of users currently in a voice channel.
+// It tries to use DiscordGo's state cache first, then falls back to fetching guild data.
+func (m *JoinToCreate) countUsersInChannel(s *discordgo.Session, guildID, channelID string) (int, error) {
+	// Try to get guild from state cache first
+	if guild, err := s.State.Guild(guildID); err == nil && guild != nil {
+		count := 0
+		for _, vs := range guild.VoiceStates {
+			if vs.ChannelID == channelID {
+				count++
+			}
+		}
+		return count, nil
+	}
+
+	// Fallback: fetch the guild via API to get voice states
+	guild, err := s.Guild(guildID)
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, vs := range guild.VoiceStates {
+		if vs.ChannelID == channelID {
+			count++
+		}
+	}
+	return count, nil
+}
+
 // maybeCleanupChannel deletes a temp channel from Discord and DB if it's empty.
 func (m *JoinToCreate) maybeCleanupChannel(ctx context.Context, s *discordgo.Session, channelID string) {
 	// Is it an active JTC channel?
-	if _, err := m.queries.GetJTCActiveChannel(ctx, channelID); err != nil {
+	active, err := m.queries.GetJTCActiveChannel(ctx, channelID)
+	if err != nil {
 		return // not a JTC active channel
 	}
 
-	// Fetch the channel from Discord to check member count
-	ch, err := s.Channel(channelID)
+	// Count users in the channel using voice states (more reliable than ch.Members)
+	userCount, err := m.countUsersInChannel(s, active.GuildID, channelID)
 	if err != nil {
-		// Channel might already be gone — clean up DB
-		_ = m.queries.DeleteJTCActiveChannel(ctx, channelID)
-		return
+		// If we can't get voice states, fall back to the old method
+		ch, err := s.Channel(channelID)
+		if err != nil {
+			// Channel might already be gone — clean up DB
+			_ = m.queries.DeleteJTCActiveChannel(ctx, channelID)
+			return
+		}
+		userCount = len(ch.Members)
 	}
 
 	// Only delete if the channel is truly empty
-	if len(ch.Members) > 0 {
+	if userCount > 0 {
 		return
 	}
 
@@ -158,7 +193,7 @@ func (m *JoinToCreate) resolveChannelName(ctx context.Context, s *discordgo.Sess
 		UserID:  userID,
 	})
 	if err == nil && settings.CustomName.Valid && settings.CustomName.String != "" {
-		return fmt.Sprintf("%s's Channel", settings.CustomName.String)
+		return settings.CustomName.String
 	}
 
 	// Fall back to Discord member info

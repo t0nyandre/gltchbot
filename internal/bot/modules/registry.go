@@ -71,15 +71,20 @@ func (r *Registry) RegisterCommands(s *discordgo.Session, appID, devGuildID stri
 		return nil
 	}
 
+	names := make([]string, len(allCommands))
+	for i, cmd := range allCommands {
+		names[i] = cmd.Name
+	}
+
 	if devGuildID != "" {
-		log.Printf("registering %d command(s) to dev guild %s (instant)", len(allCommands), devGuildID)
+		log.Printf("registering %d command(s) to dev guild %s (instant): %v", len(allCommands), devGuildID, names)
 	} else {
-		log.Printf("registering %d command(s) globally (up to 1h propagation)", len(allCommands))
+		log.Printf("registering %d command(s) globally (appID=%s, up to 1h propagation): %v", len(allCommands), appID, names)
 	}
 
 	_, err := s.ApplicationCommandBulkOverwrite(appID, devGuildID, allCommands)
 	if err != nil {
-		return fmt.Errorf("register slash commands: %w", err)
+		return fmt.Errorf("register slash commands (appID=%s, guildID=%q): %w", appID, devGuildID, err)
 	}
 
 	log.Println("slash commands registered successfully")
