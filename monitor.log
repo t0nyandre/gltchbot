@@ -1,0 +1,22 @@
+[2026-02-19 11:58:03] [INFO] ================================================
+[2026-02-19 11:58:03] [INFO] Starting Discord Bot Stack Monitor
+[2026-02-19 11:58:03] [INFO] PID: 77783
+[2026-02-19 11:58:03] [INFO] Interval: 5s
+[2026-02-19 11:58:03] [INFO] Log file: ./monitor.log
+[2026-02-19 11:58:03] [INFO] Dry run: true
+[2026-02-19 11:58:03] [INFO] ================================================
+[2026-02-19 11:58:03] [INFO] Monitor started. Press Ctrl+C to stop.
+[2026-02-19 11:58:03] [DEBUG] Starting health checks...
+[2026-02-19 11:58:03] [ERROR] postgres container not found
+[2026-02-19 11:58:03] [ERROR] PostgreSQL check failed
+[2026-02-19 11:59:11] [INFO] ================================================
+[2026-02-19 11:59:11] [INFO] Starting Discord Bot Stack Monitor
+[2026-02-19 11:59:11] [INFO] PID: 78066
+[2026-02-19 11:59:11] [INFO] Interval: 30s
+[2026-02-19 11:59:11] [INFO] Log file: ./monitor.log
+[2026-02-19 11:59:11] [INFO] Dry run: true
+[2026-02-19 11:59:11] [INFO] ================================================
+[2026-02-19 11:59:11] [INFO] Monitor started. Press Ctrl+C to stop.
+[2026-02-19 11:59:11] [DEBUG] Starting health checks...
+[2026-02-19 11:59:11] [ERROR] postgres container not found
+[2026-02-19 11:59:11] [ERROR] PostgreSQL check failed
