@@ -1,4 +1,4 @@
-.PHONY: build build-bot build-api run-bot run-api sqlc docker-up docker-down docker-logs tidy vet
+.PHONY: build build-bot build-api run-bot run-api sqlc docker-up docker-down docker-logs docker-dev-up docker-dev-down docker-dev-logs tidy vet
 
 SQLC := $(shell which sqlc 2>/dev/null || echo $(HOME)/go/bin/sqlc)
 
@@ -31,6 +31,16 @@ docker-down:
 
 docker-logs:
 	docker compose logs -f
+
+## Docker Compose dev helpers (builds from source, wipes volumes on down)
+docker-dev-up:
+	docker compose --env-file .env.dev -f docker-compose.dev.yml up -d --build
+
+docker-dev-down:
+	docker compose --env-file .env.dev -f docker-compose.dev.yml down -v
+
+docker-dev-logs:
+	docker compose --env-file .env.dev -f docker-compose.dev.yml logs -f
 
 ## Go maintenance
 tidy:

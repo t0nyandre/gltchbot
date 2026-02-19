@@ -71,6 +71,13 @@ func (c *Client) Start(ctx context.Context) error {
 		return fmt.Errorf("open discord session: %w", err)
 	}
 
+	// Register slash commands immediately after connecting so they are always
+	// up to date on every startup — not deferred to the Ready event, which
+	// is not guaranteed to fire again on reconnects.
+	if err := c.Registry.RegisterCommands(c.Session, c.cfg.DiscordAppID, c.cfg.DiscordDevGuildID); err != nil {
+		log.Printf("failed to register commands: %v", err)
+	}
+
 	return nil
 }
 
@@ -96,11 +103,6 @@ func (c *Client) onReady(s *discordgo.Session, r *discordgo.Ready) {
 		},
 	}); err != nil {
 		log.Printf("failed to set bot presence: %v", err)
-	}
-
-	// Register slash commands (guild or global based on config)
-	if err := c.Registry.RegisterCommands(s, c.cfg.DiscordAppID, c.cfg.DiscordDevGuildID); err != nil {
-		log.Printf("failed to register commands: %v", err)
 	}
 }
 

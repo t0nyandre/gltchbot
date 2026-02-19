@@ -1,14 +1,14 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: gltchbot-postgres
-    env_file: .env
+    container_name: gltchbot-postgres-dev
+    env_file: .env.dev
     environment:
       POSTGRES_DB: ${DB_NAME:-gltchbot}
       POSTGRES_USER: ${DB_USER:-gltchbot}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata-dev:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -16,47 +16,45 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+    restart: "no"
     networks:
-      - gltchbot-network
+      - gltchbot-network-dev
 
   bot:
-    image: ghcr.io/t0nyandre/gltchbot-bot:latest
     build:
       context: .
       dockerfile: Dockerfile.bot
-    container_name: gltchbot-bot
+    container_name: gltchbot-bot-dev
     depends_on:
       postgres:
         condition: service_healthy
-    env_file: .env
+    env_file: .env.dev
     environment:
       DB_HOST: postgres
-    restart: unless-stopped
+    restart: "no"
     networks:
-      - gltchbot-network
+      - gltchbot-network-dev
 
   api:
-    image: ghcr.io/t0nyandre/gltchbot-api:latest
     build:
       context: .
       dockerfile: Dockerfile.api
-    container_name: gltchbot-api
+    container_name: gltchbot-api-dev
     depends_on:
       postgres:
         condition: service_healthy
-    env_file: .env
+    env_file: .env.dev
     environment:
       DB_HOST: postgres
     ports:
       - "${API_PORT:-8080}:8080"
-    restart: unless-stopped
+    restart: "no"
     networks:
-      - gltchbot-network
+      - gltchbot-network-dev
 
 volumes:
-  pgdata:
+  pgdata-dev:
 
 networks:
-  gltchbot-network:
+  gltchbot-network-dev:
     driver: bridge
