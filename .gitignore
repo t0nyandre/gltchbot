@@ -3,6 +3,7 @@
 .env.dev
 
 # Build outputs
+bin/
 /bot
 /api
 /dist
