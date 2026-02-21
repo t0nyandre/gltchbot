@@ -11,21 +11,30 @@ import (
 type Querier interface {
 	CreateJTCActiveChannel(ctx context.Context, arg CreateJTCActiveChannelParams) (JtcActiveChannel, error)
 	CreateJTCParentChannel(ctx context.Context, arg CreateJTCParentChannelParams) (JtcParentChannel, error)
+	CreateReactionRole(ctx context.Context, arg CreateReactionRoleParams) (ReactionRole, error)
+	DeleteAllReactionRolesForGuild(ctx context.Context, guildID string) error
+	DeleteAllReactionRolesForMessage(ctx context.Context, messageID string) error
 	DeleteGuild(ctx context.Context, id string) error
 	DeleteJTCActiveChannel(ctx context.Context, channelID string) error
 	DeleteJTCParentChannel(ctx context.Context, arg DeleteJTCParentChannelParams) error
+	DeleteReactionRole(ctx context.Context, id int32) error
+	DeleteReactionRoleByMessageAndEmoji(ctx context.Context, arg DeleteReactionRoleByMessageAndEmojiParams) error
 	GetGuild(ctx context.Context, id string) (Guild, error)
 	GetGuildModule(ctx context.Context, arg GetGuildModuleParams) (GetGuildModuleRow, error)
 	GetJTCActiveChannel(ctx context.Context, channelID string) (JtcActiveChannel, error)
 	GetJTCParentChannel(ctx context.Context, channelID string) (JtcParentChannel, error)
 	GetJTCUserSettings(ctx context.Context, arg GetJTCUserSettingsParams) (JtcUserSetting, error)
 	GetModuleByName(ctx context.Context, name string) (Module, error)
+	GetReactionRole(ctx context.Context, id int32) (ReactionRole, error)
+	GetReactionRoleByMessageAndEmoji(ctx context.Context, arg GetReactionRoleByMessageAndEmojiParams) (ReactionRole, error)
 	IsModuleEnabled(ctx context.Context, arg IsModuleEnabledParams) (bool, error)
 	ListGuildModules(ctx context.Context, guildID string) ([]ListGuildModulesRow, error)
 	ListGuilds(ctx context.Context) ([]Guild, error)
 	ListJTCActiveChannels(ctx context.Context, guildID string) ([]JtcActiveChannel, error)
 	ListJTCParentChannels(ctx context.Context, guildID string) ([]JtcParentChannel, error)
 	ListModules(ctx context.Context) ([]Module, error)
+	ListReactionRolesByGuild(ctx context.Context, guildID string) ([]ReactionRole, error)
+	ListReactionRolesByMessage(ctx context.Context, messageID string) ([]ReactionRole, error)
 	UpsertGuild(ctx context.Context, arg UpsertGuildParams) (Guild, error)
 	UpsertGuildModule(ctx context.Context, arg UpsertGuildModuleParams) error
 	UpsertJTCUserSettings(ctx context.Context, arg UpsertJTCUserSettingsParams) error

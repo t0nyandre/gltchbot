@@ -125,9 +125,32 @@ Creates temporary voice channels when a user joins a parent channel.
 - `/jointocreate remove` — Remove a parent channel
 - `/jointocreate list` — List all parent channels
 
-### 🔲 Reaction Roles *(scaffolded)*
+### ✅ Reaction Roles
 
-Assign roles to users who react to a specific message. Coming soon.
+Assign roles to users who react to specific messages with designated emojis.
+
+**Setup:** `/reactionrole add message_id:<id> emoji:<emoji> role:<role>`
+
+**Features:**
+- Supports both Unicode emojis and custom emojis
+- Bot automatically reacts to messages when creating reaction roles
+- Role assignment when users react, role removal when users remove reactions
+- Cleanup functionality to remove invalid reactions and sync with current role assignments
+- List all reaction roles sorted by channel then message ID
+
+**Commands:**
+- `/reactionrole add message_id:<id> emoji:<emoji> role:<role>` — Add reaction role to specific message
+- `/reactionrole remove message_id:<id> emoji:<emoji>` — Remove reaction role from message
+- `/reactionrole list` — List all reaction roles in the server (sorted by channel then message)
+- `/reactionrole fix message_id:<id>` — Cleanup reactions on a message:
+  - Removes reactions from users who don't have the associated role
+  - Removes reactions with unauthorized emojis
+  - Keeps valid reactions from users with the correct role
+  - Ensures bot's reactions are present for new users
+
+**Emoji Formats:**
+- Unicode emojis: `✅`, `🔥`, `🎉`
+- Custom emojis: `:emoji_name:` or `:emoji_name:1234567890`
 
 ### 🔲 Auto Role *(scaffolded)*
 
