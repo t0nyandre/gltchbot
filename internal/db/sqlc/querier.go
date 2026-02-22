@@ -9,16 +9,26 @@ import (
 )
 
 type Querier interface {
+	// AutoRoles table queries
+	CreateAutoRole(ctx context.Context, arg CreateAutoRoleParams) (AutoRole, error)
 	CreateJTCActiveChannel(ctx context.Context, arg CreateJTCActiveChannelParams) (JtcActiveChannel, error)
 	CreateJTCParentChannel(ctx context.Context, arg CreateJTCParentChannelParams) (JtcParentChannel, error)
 	CreateReactionRole(ctx context.Context, arg CreateReactionRoleParams) (ReactionRole, error)
+	// AutoroleUserTriggers table queries
+	CreateUserTrigger(ctx context.Context, arg CreateUserTriggerParams) error
+	DeleteAllAutoRolesForGuild(ctx context.Context, guildID string) error
 	DeleteAllReactionRolesForGuild(ctx context.Context, guildID string) error
 	DeleteAllReactionRolesForMessage(ctx context.Context, messageID string) error
+	DeleteAutoRole(ctx context.Context, id int32) error
+	DeleteAutoRoleByGuildAndRoleAndTrigger(ctx context.Context, arg DeleteAutoRoleByGuildAndRoleAndTriggerParams) error
 	DeleteGuild(ctx context.Context, id string) error
 	DeleteJTCActiveChannel(ctx context.Context, channelID string) error
 	DeleteJTCParentChannel(ctx context.Context, arg DeleteJTCParentChannelParams) error
 	DeleteReactionRole(ctx context.Context, id int32) error
 	DeleteReactionRoleByMessageAndEmoji(ctx context.Context, arg DeleteReactionRoleByMessageAndEmojiParams) error
+	DeleteUserTriggersForGuild(ctx context.Context, guildID string) error
+	GetAutoRole(ctx context.Context, id int32) (AutoRole, error)
+	GetAutoRoleByGuildAndRoleAndTrigger(ctx context.Context, arg GetAutoRoleByGuildAndRoleAndTriggerParams) (AutoRole, error)
 	GetGuild(ctx context.Context, id string) (Guild, error)
 	GetGuildModule(ctx context.Context, arg GetGuildModuleParams) (GetGuildModuleRow, error)
 	GetJTCActiveChannel(ctx context.Context, channelID string) (JtcActiveChannel, error)
@@ -27,7 +37,10 @@ type Querier interface {
 	GetModuleByName(ctx context.Context, name string) (Module, error)
 	GetReactionRole(ctx context.Context, id int32) (ReactionRole, error)
 	GetReactionRoleByMessageAndEmoji(ctx context.Context, arg GetReactionRoleByMessageAndEmojiParams) (ReactionRole, error)
+	GetUserTrigger(ctx context.Context, arg GetUserTriggerParams) (AutoroleUserTrigger, error)
 	IsModuleEnabled(ctx context.Context, arg IsModuleEnabledParams) (bool, error)
+	ListAutoRolesByGuild(ctx context.Context, guildID string) ([]AutoRole, error)
+	ListAutoRolesByGuildAndTrigger(ctx context.Context, arg ListAutoRolesByGuildAndTriggerParams) ([]AutoRole, error)
 	ListGuildModules(ctx context.Context, guildID string) ([]ListGuildModulesRow, error)
 	ListGuilds(ctx context.Context) ([]Guild, error)
 	ListJTCActiveChannels(ctx context.Context, guildID string) ([]JtcActiveChannel, error)

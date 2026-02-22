@@ -17,6 +17,13 @@ type AutoRole struct {
 	Trigger string `json:"trigger"`
 }
 
+type AutoroleUserTrigger struct {
+	GuildID     string             `json:"guild_id"`
+	UserID      string             `json:"user_id"`
+	Trigger     string             `json:"trigger"`
+	TriggeredAt pgtype.Timestamptz `json:"triggered_at"`
+}
+
 type Guild struct {
 	ID        string             `json:"id"`
 	Name      string             `json:"name"`
