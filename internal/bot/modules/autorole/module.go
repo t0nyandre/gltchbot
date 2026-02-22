@@ -32,19 +32,94 @@ func (m *AutoRole) Description() string {
 }
 
 // Commands returns the slash commands provided by this module.
-// TODO: Implement auto role management commands.
 func (m *AutoRole) Commands() []*discordgo.ApplicationCommand {
 	return []*discordgo.ApplicationCommand{
-		// Placeholder — commands will be added when the module is fully implemented
+		{
+			Name:        "autorole",
+			Description: "Manage auto-assigned roles",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "add",
+					Description: "Add a role to be automatically assigned",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionRole,
+							Name:        "role",
+							Description: "The role to automatically assign",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "trigger",
+							Description: "When to assign the role",
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "On server join",
+									Value: "join",
+								},
+								{
+									Name:  "First message in server",
+									Value: "first_message",
+								},
+								{
+									Name:  "First reaction in server",
+									Value: "first_reaction",
+								},
+							},
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "remove",
+					Description: "Remove an auto-assigned role",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionRole,
+							Name:        "role",
+							Description: "The role to stop automatically assigning",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "trigger",
+							Description: "When the role was being assigned",
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "On server join",
+									Value: "join",
+								},
+								{
+									Name:  "First message in server",
+									Value: "first_message",
+								},
+								{
+									Name:  "First reaction in server",
+									Value: "first_reaction",
+								},
+							},
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "list",
+					Description: "List all auto-assigned roles in this server",
+				},
+			},
+		},
 	}
 }
 
 // RegisterHandlers attaches event listeners for this module.
-// TODO: Implement guildMemberAdd / messageCreate / messageReactionAdd handlers.
 func (m *AutoRole) RegisterHandlers(s *discordgo.Session) {
-	// s.AddHandler(m.handleGuildMemberAdd)
-	// s.AddHandler(m.handleFirstMessage)
-	// s.AddHandler(m.handleFirstReaction)
+	s.AddHandler(m.handleInteraction)
+	s.AddHandler(m.handleGuildMemberAdd)
+	s.AddHandler(m.handleMessageCreate)
+	s.AddHandler(m.handleMessageReactionAdd)
 }
 
 // OnEnable is called when the module is enabled for a guild.
@@ -56,5 +131,14 @@ func (m *AutoRole) OnEnable(ctx context.Context, db *pgxpool.Pool, guildID strin
 // OnDisable is called when the module is disabled for a guild.
 func (m *AutoRole) OnDisable(ctx context.Context, db *pgxpool.Pool, guildID string) error {
 	log.Printf("[autorole] disabled for guild %s", guildID)
+	// Clean up all auto roles and user triggers for this guild
+	if err := m.queries.DeleteAllAutoRolesForGuild(ctx, guildID); err != nil {
+		log.Printf("[autorole] failed to delete auto roles for guild %s: %v", guildID, err)
+		return err
+	}
+	if err := m.queries.DeleteUserTriggersForGuild(ctx, guildID); err != nil {
+		log.Printf("[autorole] failed to delete user triggers for guild %s: %v", guildID, err)
+		return err
+	}
 	return nil
 }
