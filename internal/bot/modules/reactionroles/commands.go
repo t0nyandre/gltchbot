@@ -15,7 +15,7 @@ import (
 func logStructured(level, module, operation, guildID, userID, message string, data map[string]interface{}) {
 	// Build structured log message
 	logMsg := fmt.Sprintf("[%s] module=%s operation=%s", level, module, operation)
-	
+
 	if guildID != "" {
 		logMsg += fmt.Sprintf(" guild_id=%s", guildID)
 	}
@@ -25,12 +25,12 @@ func logStructured(level, module, operation, guildID, userID, message string, da
 	if message != "" {
 		logMsg += fmt.Sprintf(" message=%q", message)
 	}
-	
+
 	// Add data fields
 	for key, value := range data {
 		logMsg += fmt.Sprintf(" %s=%v", key, value)
 	}
-	
+
 	log.Println(logMsg)
 }
 
@@ -76,14 +76,14 @@ func deferResponse(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 			Flags: discordgo.MessageFlagsEphemeral,
 		},
 	})
-	
+
 	if err != nil {
 		logError("defer_response", i.GuildID, i.Member.User.ID, "failed to send deferred response", err, map[string]interface{}{
 			"command": i.ApplicationCommandData().Name,
 		})
 		return err
 	}
-	
+
 	logDebug("defer_response", i.GuildID, i.Member.User.ID, "deferred response sent", map[string]interface{}{
 		"command": i.ApplicationCommandData().Name,
 	})
@@ -95,17 +95,17 @@ func editDeferredResponse(s *discordgo.Session, i *discordgo.InteractionCreate, 
 	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Content: &content,
 	})
-	
+
 	if err != nil {
 		logError("edit_deferred_response", i.GuildID, i.Member.User.ID, "failed to edit deferred response", err, map[string]interface{}{
-			"command": i.ApplicationCommandData().Name,
+			"command":        i.ApplicationCommandData().Name,
 			"content_length": len(content),
 		})
 		return err
 	}
-	
+
 	logDebug("edit_deferred_response", i.GuildID, i.Member.User.ID, "deferred response edited", map[string]interface{}{
-		"command": i.ApplicationCommandData().Name,
+		"command":        i.ApplicationCommandData().Name,
 		"content_length": len(content),
 	})
 	return nil
@@ -125,7 +125,7 @@ func respondEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, cont
 // handleInteraction routes slash command interactions for this module.
 func (m *ReactionRoles) handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	startTime := time.Now()
-	
+
 	if i.Type != discordgo.InteractionApplicationCommand {
 		return
 	}
@@ -155,7 +155,7 @@ func (m *ReactionRoles) handleInteraction(s *discordgo.Session, i *discordgo.Int
 		respondEphemeral(s, i, "❌ You need the **Administrator** permission to use this command.")
 		logCommandEnd("reactionrole", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"subcommand": i.ApplicationCommandData().Options[0].Name,
-			"error": "insufficient_permissions",
+			"error":      "insufficient_permissions",
 		})
 		return
 	}
@@ -170,7 +170,7 @@ func (m *ReactionRoles) handleInteraction(s *discordgo.Session, i *discordgo.Int
 		respondEphemeral(s, i, "❌ The Reaction Roles module is not enabled for this server. Please enable it first via the dashboard.")
 		logCommandEnd("reactionrole", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"subcommand": i.ApplicationCommandData().Options[0].Name,
-			"error": "module_disabled",
+			"error":      "module_disabled",
 		})
 		return
 	}
@@ -186,7 +186,7 @@ func (m *ReactionRoles) handleInteraction(s *discordgo.Session, i *discordgo.Int
 	case "fix":
 		m.handleFix(s, i, sub)
 	}
-	
+
 	// Log successful command routing
 	logCommandEnd("reactionrole", i.GuildID, userID, time.Since(startTime), true, map[string]interface{}{
 		"subcommand": sub.Name,
@@ -197,7 +197,7 @@ func (m *ReactionRoles) handleInteraction(s *discordgo.Session, i *discordgo.Int
 func (m *ReactionRoles) handleAdd(s *discordgo.Session, i *discordgo.InteractionCreate, sub *discordgo.ApplicationCommandInteractionDataOption) {
 	startTime := time.Now()
 	ctx := context.Background()
-	
+
 	userID := ""
 	if i.Member != nil && i.Member.User != nil {
 		userID = i.Member.User.ID
@@ -243,7 +243,7 @@ func (m *ReactionRoles) handleAdd(s *discordgo.Session, i *discordgo.Interaction
 		_ = editDeferredResponse(s, i, "❌ Could not find the specified message. Make sure the message ID is correct and the message is in this channel.")
 		logCommandEnd("reactionrole_add", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"message_id": messageID,
-			"error": "message_not_found",
+			"error":      "message_not_found",
 		})
 		return
 	}
@@ -254,7 +254,7 @@ func (m *ReactionRoles) handleAdd(s *discordgo.Session, i *discordgo.Interaction
 		_ = editDeferredResponse(s, i, "❌ Invalid emoji format. Use:\n• Unicode emoji: ✅ 🔥 🎉\n• Custom emoji: `:emoji_name:` or `:emoji_name:id`\n• You can also copy-paste emojis directly from Discord.")
 		logCommandEnd("reactionrole_add", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"emoji_input": emoji,
-			"error": "invalid_emoji_format",
+			"error":       "invalid_emoji_format",
 		})
 		return
 	}
@@ -268,8 +268,8 @@ func (m *ReactionRoles) handleAdd(s *discordgo.Session, i *discordgo.Interaction
 		_ = editDeferredResponse(s, i, fmt.Sprintf("❌ A reaction role with emoji %s already exists for this message.", emojiClean))
 		logCommandEnd("reactionrole_add", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"message_id": messageID,
-			"emoji": emojiClean,
-			"error": "reaction_role_exists",
+			"emoji":      emojiClean,
+			"error":      "reaction_role_exists",
 		})
 		return
 	}
@@ -285,13 +285,13 @@ func (m *ReactionRoles) handleAdd(s *discordgo.Session, i *discordgo.Interaction
 	if err != nil {
 		logError("add_operation", i.GuildID, userID, "failed to create reaction role in database", err, map[string]interface{}{
 			"message_id": messageID,
-			"emoji": emojiClean,
-			"role_id": role.ID,
+			"emoji":      emojiClean,
+			"role_id":    role.ID,
 		})
 		_ = editDeferredResponse(s, i, "❌ Failed to create reaction role in database.")
 		logCommandEnd("reactionrole_add", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"message_id": messageID,
-			"error": "database_create_failed",
+			"error":      "database_create_failed",
 		})
 		return
 	}
@@ -301,7 +301,7 @@ func (m *ReactionRoles) handleAdd(s *discordgo.Session, i *discordgo.Interaction
 	if err != nil {
 		logError("add_operation", i.GuildID, userID, "failed to add reaction to message", err, map[string]interface{}{
 			"message_id": messageID,
-			"emoji": emojiClean,
+			"emoji":      emojiClean,
 			"channel_id": msg.ChannelID,
 		})
 		// Clean up database entry if we can't add the reaction
@@ -309,13 +309,13 @@ func (m *ReactionRoles) handleAdd(s *discordgo.Session, i *discordgo.Interaction
 		_ = editDeferredResponse(s, i, "❌ Failed to add reaction to the message. Make sure:\n• I have the **Add Reactions** permission\n• The emoji is from this server or a Unicode emoji\n• The emoji still exists in this server")
 		logCommandEnd("reactionrole_add", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"message_id": messageID,
-			"error": "reaction_add_failed",
+			"error":      "reaction_add_failed",
 		})
 		return
 	}
 
 	// Build success message
-	successMsg := fmt.Sprintf("✅ Reaction role created! Reacting with %s on [this message](https://discord.com/channels/%s/%s/%s) will now give the <@&%s> role.", 
+	successMsg := fmt.Sprintf("✅ Reaction role created! Reacting with %s on [this message](https://discord.com/channels/%s/%s/%s) will now give the <@&%s> role.",
 		emojiClean, i.GuildID, msg.ChannelID, msg.ID, role.ID)
 
 	// Send final result
@@ -328,10 +328,10 @@ func (m *ReactionRoles) handleAdd(s *discordgo.Session, i *discordgo.Interaction
 
 	// Log command completion
 	logCommandEnd("reactionrole_add", i.GuildID, userID, time.Since(startTime), true, map[string]interface{}{
-		"message_id": messageID,
-		"emoji": emojiClean,
-		"role_id": role.ID,
-		"channel_id": msg.ChannelID,
+		"message_id":       messageID,
+		"emoji":            emojiClean,
+		"role_id":          role.ID,
+		"channel_id":       msg.ChannelID,
 		"reaction_role_id": reactionRole.ID,
 	})
 }
@@ -416,7 +416,7 @@ func (m *ReactionRoles) handleList(s *discordgo.Session, i *discordgo.Interactio
 func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.InteractionCreate, sub *discordgo.ApplicationCommandInteractionDataOption) {
 	startTime := time.Now()
 	ctx := context.Background()
-	
+
 	userID := ""
 	if i.Member != nil && i.Member.User != nil {
 		userID = i.Member.User.ID
@@ -452,7 +452,7 @@ func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.Interaction
 		_ = editDeferredResponse(s, i, "❌ No reaction roles found for this message.")
 		logCommandEnd("reactionrole_fix", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"message_id": messageID,
-			"error": "no_reaction_roles",
+			"error":      "no_reaction_roles",
 		})
 		return
 	}
@@ -470,7 +470,7 @@ func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.Interaction
 		_ = editDeferredResponse(s, i, "❌ Could not find the specified message.")
 		logCommandEnd("reactionrole_fix", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"message_id": messageID,
-			"error": "message_not_found",
+			"error":      "message_not_found",
 		})
 		return
 	}
@@ -484,15 +484,15 @@ func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.Interaction
 		_ = editDeferredResponse(s, i, "❌ Failed to get guild members. Please try again.")
 		logCommandEnd("reactionrole_fix", i.GuildID, userID, time.Since(startTime), false, map[string]interface{}{
 			"message_id": messageID,
-			"error": "guild_members_fetch_failed",
+			"error":      "guild_members_fetch_failed",
 		})
 		return
 	}
 
 	// Log member count for debugging
 	logDebug("fix_operation", i.GuildID, userID, "fetched guild members", map[string]interface{}{
-		"member_count": len(guildMembers),
-		"reaction_role_count": len(reactionRoles),
+		"member_count":           len(guildMembers),
+		"reaction_role_count":    len(reactionRoles),
 		"message_reaction_count": len(msg.Reactions),
 	})
 
@@ -539,7 +539,7 @@ func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.Interaction
 				err := s.MessageReactionRemove(channelID, messageID, emoji, user.ID)
 				if err != nil {
 					logError("fix_operation", i.GuildID, userID, "failed to remove unauthorized reaction", err, map[string]interface{}{
-						"emoji": emoji,
+						"emoji":   emoji,
 						"user_id": user.ID,
 					})
 				} else {
@@ -568,7 +568,7 @@ func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.Interaction
 				err := s.MessageReactionRemove(channelID, messageID, emoji, user.ID)
 				if err != nil {
 					logError("fix_operation", i.GuildID, userID, "failed to remove reaction", err, map[string]interface{}{
-						"emoji": emoji,
+						"emoji":   emoji,
 						"user_id": user.ID,
 						"role_id": roleID,
 					})
@@ -614,17 +614,17 @@ func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.Interaction
 
 	// Build summary message
 	msgText := fmt.Sprintf("✅ Cleaned up reactions for message `%s`.\n\n", messageID)
-	
+
 	if removedUnauthorizedEmoji > 0 {
 		msgText += fmt.Sprintf("• Removed %d reaction(s) with unauthorized emojis\n", removedUnauthorizedEmoji)
 	}
-	
+
 	if removedNoRole > 0 {
 		msgText += fmt.Sprintf("• Removed %d reaction(s) from users without the required role\n", removedNoRole)
 	}
-	
+
 	msgText += fmt.Sprintf("• Kept %d valid reaction(s)\n", keptValidReactions)
-	
+
 	if addedBotReactions > 0 {
 		msgText += fmt.Sprintf("• Added %d missing bot reaction(s)\n", addedBotReactions)
 	} else {
@@ -641,14 +641,14 @@ func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.Interaction
 
 	// Log command completion with detailed statistics
 	logCommandEnd("reactionrole_fix", i.GuildID, userID, time.Since(startTime), true, map[string]interface{}{
-		"message_id": messageID,
-		"removed_unauthorized": removedUnauthorizedEmoji,
-		"removed_no_role": removedNoRole,
-		"kept_valid": keptValidReactions,
-		"added_bot_reactions": addedBotReactions,
-		"total_operations": totalReactionOperations,
-		"reaction_role_count": len(reactionRoles),
-		"guild_member_count": len(guildMembers),
+		"message_id":             messageID,
+		"removed_unauthorized":   removedUnauthorizedEmoji,
+		"removed_no_role":        removedNoRole,
+		"kept_valid":             keptValidReactions,
+		"added_bot_reactions":    addedBotReactions,
+		"total_operations":       totalReactionOperations,
+		"reaction_role_count":    len(reactionRoles),
+		"guild_member_count":     len(guildMembers),
 		"message_reaction_count": len(msg.Reactions),
 	})
 }
@@ -659,7 +659,7 @@ func (m *ReactionRoles) handleFix(s *discordgo.Session, i *discordgo.Interaction
 // - Custom: :emoji_name:, :emoji_name:id, <:emoji_name:id>, <a:emoji_name:id>
 func parseEmoji(input string) string {
 	input = strings.TrimSpace(input)
-	
+
 	if input == "" {
 		return ""
 	}
@@ -670,18 +670,18 @@ func parseEmoji(input string) string {
 		// Remove angle brackets
 		input = strings.TrimPrefix(input, "<")
 		input = strings.TrimSuffix(input, ">")
-		
+
 		// Handle animated emoji prefix
 		if strings.HasPrefix(input, "a:") {
 			input = strings.TrimPrefix(input, "a:")
 		}
-		
+
 		// Now input should be in format :name:id or name:id
 		// Remove leading colon if present
 		if strings.HasPrefix(input, ":") {
 			input = strings.TrimPrefix(input, ":")
 		}
-		
+
 		// Split by : to get name and id
 		parts := strings.Split(input, ":")
 		if len(parts) == 2 {
