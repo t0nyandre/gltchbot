@@ -5,12 +5,12 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/t0nyandre/gltchbot/internal/api/middleware"
 	"github.com/t0nyandre/gltchbot/internal/api/routes"
 	"github.com/t0nyandre/gltchbot/internal/bot/modules"
 	"github.com/t0nyandre/gltchbot/internal/config"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Server is the HTTP API server.
@@ -25,9 +25,9 @@ func New(cfg *config.Config, db *pgxpool.Pool, registry *modules.Registry) *Serv
 	queries := dbsqlc.New(db)
 
 	// Handlers
-	guildHandler  := routes.NewGuildHandler(queries)
+	guildHandler := routes.NewGuildHandler(queries)
 	moduleHandler := routes.NewModuleHandler(queries, registry)
-	jtcHandler    := routes.NewJTCHandler(queries)
+	jtcHandler := routes.NewJTCHandler(queries)
 
 	mux := http.NewServeMux()
 

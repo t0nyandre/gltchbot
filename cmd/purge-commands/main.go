@@ -14,12 +14,12 @@ import (
 func main() {
 	// Define command-line flags
 	var (
-		guildID  = flag.String("guild", "", "Guild ID to purge commands from (optional)")
-		global   = flag.Bool("global", false, "Purge global commands")
-		all      = flag.Bool("all", false, "Purge all commands (global + all guilds)")
-		dryRun   = flag.Bool("dry-run", false, "Show what would be deleted without actually deleting")
-		force    = flag.Bool("force", false, "Skip confirmation prompts")
-		help     = flag.Bool("help", false, "Show help")
+		guildID = flag.String("guild", "", "Guild ID to purge commands from (optional)")
+		global  = flag.Bool("global", false, "Purge global commands")
+		all     = flag.Bool("all", false, "Purge all commands (global + all guilds)")
+		dryRun  = flag.Bool("dry-run", false, "Show what would be deleted without actually deleting")
+		force   = flag.Bool("force", false, "Skip confirmation prompts")
+		help    = flag.Bool("help", false, "Show help")
 	)
 	flag.Parse()
 

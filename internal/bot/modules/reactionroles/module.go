@@ -25,8 +25,10 @@ func New(db *pgxpool.Pool) *ReactionRoles {
 	}
 }
 
-func (m *ReactionRoles) Name() string        { return moduleName }
-func (m *ReactionRoles) Description() string { return "Allow users to assign roles to themselves by reacting to a message" }
+func (m *ReactionRoles) Name() string { return moduleName }
+func (m *ReactionRoles) Description() string {
+	return "Allow users to assign roles to themselves by reacting to a message"
+}
 
 // Commands returns the slash commands provided by this module.
 func (m *ReactionRoles) Commands() []*discordgo.ApplicationCommand {

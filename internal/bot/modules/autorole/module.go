@@ -26,8 +26,10 @@ func New(db *pgxpool.Pool) *AutoRole {
 	}
 }
 
-func (m *AutoRole) Name() string        { return moduleName }
-func (m *AutoRole) Description() string { return "Automatically assign roles to users on join or first activity" }
+func (m *AutoRole) Name() string { return moduleName }
+func (m *AutoRole) Description() string {
+	return "Automatically assign roles to users on join or first activity"
+}
 
 // Commands returns the slash commands provided by this module.
 // TODO: Implement auto role management commands.

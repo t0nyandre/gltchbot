@@ -25,8 +25,10 @@ func New(db *pgxpool.Pool) *JoinToCreate {
 	}
 }
 
-func (m *JoinToCreate) Name() string        { return moduleName }
-func (m *JoinToCreate) Description() string { return "Automatically create temporary voice channels when a user joins a designated parent channel" }
+func (m *JoinToCreate) Name() string { return moduleName }
+func (m *JoinToCreate) Description() string {
+	return "Automatically create temporary voice channels when a user joins a designated parent channel"
+}
 
 // Commands returns the slash commands provided by this module.
 func (m *JoinToCreate) Commands() []*discordgo.ApplicationCommand {

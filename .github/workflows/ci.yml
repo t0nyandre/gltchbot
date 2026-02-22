@@ -27,12 +27,12 @@ jobs:
 
       - name: Check formatting
         run: |
-          unformatted=$(gofmt -l ./...)
+          unformatted=$(gofmt -l .)
           if [ -n "$unformatted" ]; then
             echo "The following files are not formatted:"
             echo "$unformatted"
             echo ""
-            echo "Run: gofmt -w ./..."
+            echo "Run: gofmt -w ."
             exit 1
           fi
 
