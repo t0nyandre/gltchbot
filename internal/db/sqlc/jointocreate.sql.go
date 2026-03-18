@@ -206,6 +206,47 @@ func (q *Queries) ListJTCParentChannels(ctx context.Context, guildID string) ([]
 	return items, nil
 }
 
+const countJTCParentChannels = `-- name: CountJTCParentChannels :one
+SELECT COUNT(*) FROM jtc_parent_channels WHERE guild_id = $1
+`
+
+func (q *Queries) CountJTCParentChannels(ctx context.Context, guildID string) (int64, error) {
+	row := q.db.QueryRow(ctx, countJTCParentChannels, guildID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const listJTCParentChannelsPaginated = `-- name: ListJTCParentChannelsPaginated :many
+SELECT id, guild_id, channel_id, category_id, channel_name FROM jtc_parent_channels WHERE guild_id = $1 LIMIT $2 OFFSET $3
+`
+
+func (q *Queries) ListJTCParentChannelsPaginated(ctx context.Context, guildID string, limit int32, offset int32) ([]JtcParentChannel, error) {
+	rows, err := q.db.Query(ctx, listJTCParentChannelsPaginated, guildID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []JtcParentChannel{}
+	for rows.Next() {
+		var i JtcParentChannel
+		if err := rows.Scan(
+			&i.ID,
+			&i.GuildID,
+			&i.ChannelID,
+			&i.CategoryID,
+			&i.ChannelName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertJTCUserSettings = `-- name: UpsertJTCUserSettings :exec
 INSERT INTO jtc_user_settings (guild_id, user_id, custom_name)
 VALUES ($1, $2, $3)

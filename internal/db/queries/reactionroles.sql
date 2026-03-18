@@ -14,6 +14,14 @@ SELECT * FROM reaction_roles
 WHERE guild_id = $1 
 ORDER BY channel_id, message_id;
 
+-- name: CountReactionRolesByGuild :one
+SELECT COUNT(*) FROM reaction_roles WHERE guild_id = $1;
+
+-- name: ListReactionRolesByGuildPaginated :many
+SELECT * FROM reaction_roles 
+WHERE guild_id = $1 
+ORDER BY channel_id, message_id LIMIT $2 OFFSET $3;
+
 -- name: ListReactionRolesByMessage :many
 SELECT * FROM reaction_roles WHERE message_id = $1;
 

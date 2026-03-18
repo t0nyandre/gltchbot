@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
@@ -22,12 +23,16 @@ type Config struct {
 	BotActivityText string
 
 	// Database
-	DBHost     string
-	DBPort     int
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBSSLMode  string
+	DBHost              string
+	DBPort              int
+	DBUser              string
+	DBPassword          string
+	DBName              string
+	DBSSLMode           string
+	DBMaxConns          int
+	DBMinConns          int
+	DBMaxConnLifetime   time.Duration
+	DBMaxConnIdleTime   time.Duration
 
 	// API
 	APIPort int
@@ -85,6 +90,31 @@ func Load() (*Config, error) {
 	cfg.DBPassword = password
 	cfg.DBName = getEnvOrDefault("DB_NAME", "gltchbot")
 	cfg.DBSSLMode = getEnvOrDefault("DB_SSLMODE", "disable")
+
+	// Connection pool settings
+	maxConns, err := strconv.Atoi(getEnvOrDefault("DB_MAX_CONNS", "10"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid DB_MAX_CONNS: %w", err)
+	}
+	cfg.DBMaxConns = maxConns
+
+	minConns, err := strconv.Atoi(getEnvOrDefault("DB_MIN_CONNS", "2"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid DB_MIN_CONNS: %w", err)
+	}
+	cfg.DBMinConns = minConns
+
+	maxConnLifetime, err := time.ParseDuration(getEnvOrDefault("DB_MAX_CONN_LIFETIME", "1h"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid DB_MAX_CONN_LIFETIME: %w", err)
+	}
+	cfg.DBMaxConnLifetime = maxConnLifetime
+
+	maxConnIdleTime, err := time.ParseDuration(getEnvOrDefault("DB_MAX_CONN_IDLE_TIME", "30m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid DB_MAX_CONN_IDLE_TIME: %w", err)
+	}
+	cfg.DBMaxConnIdleTime = maxConnIdleTime
 
 	// API
 	apiPort, err := strconv.Atoi(getEnvOrDefault("API_PORT", "8080"))

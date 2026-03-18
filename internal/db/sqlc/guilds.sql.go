@@ -53,6 +53,41 @@ func (q *Queries) ListGuilds(ctx context.Context) ([]Guild, error) {
 	return items, nil
 }
 
+const countGuilds = `-- name: CountGuilds :one
+SELECT COUNT(*) FROM guilds
+`
+
+func (q *Queries) CountGuilds(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countGuilds)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const listGuildsPaginated = `-- name: ListGuildsPaginated :many
+SELECT id, name, created_at FROM guilds ORDER BY created_at DESC LIMIT $1 OFFSET $2
+`
+
+func (q *Queries) ListGuildsPaginated(ctx context.Context, limit int32, offset int32) ([]Guild, error) {
+	rows, err := q.db.Query(ctx, listGuildsPaginated, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Guild{}
+	for rows.Next() {
+		var i Guild
+		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertGuild = `-- name: UpsertGuild :one
 INSERT INTO guilds (id, name)
 VALUES ($1, $2)

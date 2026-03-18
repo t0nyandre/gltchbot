@@ -158,6 +158,50 @@ func (q *Queries) ListReactionRolesByGuild(ctx context.Context, guildID string) 
 	return items, nil
 }
 
+const countReactionRolesByGuild = `-- name: CountReactionRolesByGuild :one
+SELECT COUNT(*) FROM reaction_roles WHERE guild_id = $1
+`
+
+func (q *Queries) CountReactionRolesByGuild(ctx context.Context, guildID string) (int64, error) {
+	row := q.db.QueryRow(ctx, countReactionRolesByGuild, guildID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const listReactionRolesByGuildPaginated = `-- name: ListReactionRolesByGuildPaginated :many
+SELECT id, guild_id, channel_id, message_id, emoji, role_id FROM reaction_roles 
+WHERE guild_id = $1 
+ORDER BY channel_id, message_id LIMIT $2 OFFSET $3
+`
+
+func (q *Queries) ListReactionRolesByGuildPaginated(ctx context.Context, guildID string, limit int32, offset int32) ([]ReactionRole, error) {
+	rows, err := q.db.Query(ctx, listReactionRolesByGuildPaginated, guildID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReactionRole{}
+	for rows.Next() {
+		var i ReactionRole
+		if err := rows.Scan(
+			&i.ID,
+			&i.GuildID,
+			&i.ChannelID,
+			&i.MessageID,
+			&i.Emoji,
+			&i.RoleID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listReactionRolesByMessage = `-- name: ListReactionRolesByMessage :many
 SELECT id, guild_id, channel_id, message_id, emoji, role_id FROM reaction_roles WHERE message_id = $1
 `
