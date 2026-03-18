@@ -51,8 +51,18 @@ func Load() (*Config, error) {
 	cfg := &Config{}
 
 	// Discord
-	cfg.DiscordToken = requireEnv("DISCORD_TOKEN")
-	cfg.DiscordAppID = requireEnv("DISCORD_APP_ID")
+	token, err := requireEnv("DISCORD_TOKEN")
+	if err != nil {
+		return nil, err
+	}
+	cfg.DiscordToken = token
+	
+	appID, err := requireEnv("DISCORD_APP_ID")
+	if err != nil {
+		return nil, err
+	}
+	cfg.DiscordAppID = appID
+	
 	cfg.DiscordDevGuildID = os.Getenv("DISCORD_DEV_GUILD_ID")
 
 	// Bot presence
@@ -68,7 +78,11 @@ func Load() (*Config, error) {
 	}
 	cfg.DBPort = port
 	cfg.DBUser = getEnvOrDefault("DB_USER", "gltchbot")
-	cfg.DBPassword = requireEnv("DB_PASSWORD")
+	password, err := requireEnv("DB_PASSWORD")
+	if err != nil {
+		return nil, err
+	}
+	cfg.DBPassword = password
 	cfg.DBName = getEnvOrDefault("DB_NAME", "gltchbot")
 	cfg.DBSSLMode = getEnvOrDefault("DB_SSLMODE", "disable")
 
@@ -78,18 +92,22 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid API_PORT: %w", err)
 	}
 	cfg.APIPort = apiPort
-	cfg.APIKey = requireEnv("API_KEY")
+	apiKey, err := requireEnv("API_KEY")
+	if err != nil {
+		return nil, err
+	}
+	cfg.APIKey = apiKey
 
 	return cfg, nil
 }
 
-// requireEnv returns the value of an env var or panics with a helpful message.
-func requireEnv(key string) string {
+// requireEnv returns the value of an env var or returns an error if not set.
+func requireEnv(key string) (string, error) {
 	v := os.Getenv(key)
 	if v == "" {
-		panic(fmt.Sprintf("required environment variable %q is not set", key))
+		return "", fmt.Errorf("required environment variable %q is not set", key)
 	}
-	return v
+	return v, nil
 }
 
 func getEnvOrDefault(key, defaultVal string) string {
