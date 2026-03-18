@@ -28,9 +28,9 @@ type Module interface {
 
 	// OnEnable is called when the module is enabled for a guild.
 	// Use this to create any required database entries for the guild.
-	OnEnable(ctx context.Context, db *pgxpool.Pool, guildID string) error
+	OnEnable(ctx context.Context, guildID string) error
 
 	// OnDisable is called when the module is disabled for a guild.
 	// Use this to clean up guild-specific data if needed.
-	OnDisable(ctx context.Context, db *pgxpool.Pool, guildID string) error
+	OnDisable(ctx context.Context, guildID string) error
 }

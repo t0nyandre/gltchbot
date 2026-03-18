@@ -3,11 +3,11 @@ package modules
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgxpool"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 // Registry manages all registered modules and their lifecycle.
@@ -29,7 +29,7 @@ func NewRegistry(db *pgxpool.Pool) *Registry {
 // Register adds a module to the registry.
 func (r *Registry) Register(m Module) {
 	r.modules[m.Name()] = m
-	log.Printf("module registered: %s", m.Name())
+	logging.Info("module registered", "module", m.Name())
 }
 
 // Get returns a module by name.
@@ -53,7 +53,7 @@ func (r *Registry) All() []Module {
 func (r *Registry) RegisterHandlers(s *discordgo.Session) {
 	for _, m := range r.modules {
 		m.RegisterHandlers(s)
-		log.Printf("handlers registered for module: %s", m.Name())
+		logging.Info("handlers registered", "module", m.Name())
 	}
 }
 
@@ -67,7 +67,7 @@ func (r *Registry) RegisterCommands(s *discordgo.Session, appID, devGuildID stri
 	}
 
 	if len(allCommands) == 0 {
-		log.Println("no slash commands to register")
+		logging.Info("no slash commands to register")
 		return nil
 	}
 
@@ -77,9 +77,9 @@ func (r *Registry) RegisterCommands(s *discordgo.Session, appID, devGuildID stri
 	}
 
 	if devGuildID != "" {
-		log.Printf("registering %d command(s) to dev guild %s (instant): %v", len(allCommands), devGuildID, names)
+		logging.Info("registering commands", "scope", "dev_guild", "dev_guild_id", devGuildID, "command_count", len(allCommands), "commands", names)
 	} else {
-		log.Printf("registering %d command(s) globally (appID=%s, up to 1h propagation): %v", len(allCommands), appID, names)
+		logging.Info("registering commands", "scope", "global", "app_id", appID, "command_count", len(allCommands), "commands", names)
 	}
 
 	_, err := s.ApplicationCommandBulkOverwrite(appID, devGuildID, allCommands)
@@ -87,7 +87,7 @@ func (r *Registry) RegisterCommands(s *discordgo.Session, appID, devGuildID stri
 		return fmt.Errorf("register slash commands (appID=%s, guildID=%q): %w", appID, devGuildID, err)
 	}
 
-	log.Println("slash commands registered successfully")
+	logging.Info("slash commands registered", "success", true)
 	return nil
 }
 
@@ -115,11 +115,11 @@ func (r *Registry) EnableForGuild(ctx context.Context, moduleName, guildID strin
 	}
 
 	// Call module-specific enable hook
-	if err := m.OnEnable(ctx, r.db, guildID); err != nil {
+	if err := m.OnEnable(ctx, guildID); err != nil {
 		return fmt.Errorf("module %s OnEnable: %w", moduleName, err)
 	}
 
-	log.Printf("module %s enabled for guild %s", moduleName, guildID)
+	logging.Info("module enabled", "module", moduleName, "guild_id", guildID)
 	return nil
 }
 
@@ -144,11 +144,11 @@ func (r *Registry) DisableForGuild(ctx context.Context, moduleName, guildID stri
 		return fmt.Errorf("upsert guild module: %w", err)
 	}
 
-	if err := m.OnDisable(ctx, r.db, guildID); err != nil {
+	if err := m.OnDisable(ctx, guildID); err != nil {
 		return fmt.Errorf("module %s OnDisable: %w", moduleName, err)
 	}
 
-	log.Printf("module %s disabled for guild %s", moduleName, guildID)
+	logging.Info("module disabled", "module", moduleName, "guild_id", guildID)
 	return nil
 }
 

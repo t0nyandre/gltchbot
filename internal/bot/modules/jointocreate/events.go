@@ -3,12 +3,13 @@ package jointocreate
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+	"github.com/t0nyandre/gltchbot/internal/db"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 // handleVoiceStateUpdate fires whenever a user joins, leaves, or moves between voice channels.
@@ -26,19 +27,21 @@ func (m *JoinToCreate) handleVoiceStateUpdate(s *discordgo.Session, vs *discordg
 	}
 
 	// Check if the joined channel is a JTC parent channel
-	parent, err := m.queries.GetJTCParentChannel(ctx, vs.ChannelID)
-	if err != nil {
-		if err != pgx.ErrNoRows {
-			log.Printf("[jointocreate] error checking parent channel %s: %v", vs.ChannelID, err)
-		}
+	parent := m.getParentChannel(ctx, vs.ChannelID)
+	if parent == nil {
 		return // not a parent channel, nothing to do
 	}
 
 	// Check that the JTC module is enabled for this guild
-	enabled, err := m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
-		GuildID: vs.GuildID,
-		Name:    moduleName,
-	})
+	var enabled bool
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		enabled, innerErr = m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
+			GuildID: vs.GuildID,
+			Name:    moduleName,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil || !enabled {
 		return
 	}
@@ -49,7 +52,7 @@ func (m *JoinToCreate) handleVoiceStateUpdate(s *discordgo.Session, vs *discordg
 	// Fetch the parent channel to copy its settings (bitrate, user limit, etc.)
 	parentCh, err := s.Channel(parent.ChannelID)
 	if err != nil {
-		log.Printf("[jointocreate] failed to fetch parent channel %s: %v", parent.ChannelID, err)
+		logging.Error("failed to fetch parent channel", "module", "jointocreate", "channel_id", parent.ChannelID, "error", err)
 		return
 	}
 
@@ -62,25 +65,29 @@ func (m *JoinToCreate) handleVoiceStateUpdate(s *discordgo.Session, vs *discordg
 		UserLimit: parentCh.UserLimit,
 	})
 	if err != nil {
-		log.Printf("[jointocreate] failed to create temp channel: %v", err)
+		logging.Error("failed to create temp channel", "module", "jointocreate", "error", err)
 		return
 	}
 
 	// Save the new channel to the database
-	if _, err := m.queries.CreateJTCActiveChannel(ctx, dbsqlc.CreateJTCActiveChannelParams{
-		ChannelID: newCh.ID,
-		GuildID:   vs.GuildID,
-		OwnerID:   vs.UserID,
-		ParentID:  parent.ChannelID,
-	}); err != nil {
-		log.Printf("[jointocreate] failed to save active channel: %v", err)
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		_, innerErr := m.queries.CreateJTCActiveChannel(ctx, dbsqlc.CreateJTCActiveChannelParams{
+			ChannelID: newCh.ID,
+			GuildID:   vs.GuildID,
+			OwnerID:   vs.UserID,
+			ParentID:  parent.ChannelID,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
+	if err != nil {
+		logging.Error("failed to save active channel", "module", "jointocreate", "error", err)
 		_, _ = s.ChannelDelete(newCh.ID)
 		return
 	}
 
 	// Move the user into the new channel
 	if err := s.GuildMemberMove(vs.GuildID, vs.UserID, &newCh.ID); err != nil {
-		log.Printf("[jointocreate] failed to move user %s to channel %s: %v", vs.UserID, newCh.ID, err)
+		logging.Error("failed to move user to channel", "module", "jointocreate", "user_id", vs.UserID, "channel_id", newCh.ID, "error", err)
 	}
 }
 
@@ -90,18 +97,25 @@ func (m *JoinToCreate) handleChannelUpdate(s *discordgo.Session, cu *discordgo.C
 	ctx := context.Background()
 
 	// Check if this is an active JTC channel
-	active, err := m.queries.GetJTCActiveChannel(ctx, cu.ID)
+	var active dbsqlc.JtcActiveChannel
+	err := db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		active, innerErr = m.queries.GetJTCActiveChannel(ctx, cu.ID)
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		return // not a JTC channel
 	}
 
 	// Save the new name as the user's preference
-	if err := m.queries.UpsertJTCUserSettings(ctx, dbsqlc.UpsertJTCUserSettingsParams{
-		GuildID:    active.GuildID,
-		UserID:     active.OwnerID,
-		CustomName: pgtype.Text{String: cu.Name, Valid: true},
-	}); err != nil {
-		log.Printf("[jointocreate] failed to save user channel name preference: %v", err)
+	if err := db.WithRetry(ctx, func(ctx context.Context) error {
+		return m.queries.UpsertJTCUserSettings(ctx, dbsqlc.UpsertJTCUserSettingsParams{
+			GuildID:    active.GuildID,
+			UserID:     active.OwnerID,
+			CustomName: pgtype.Text{String: cu.Name, Valid: true},
+		})
+	}, db.DefaultRetryConfig()); err != nil {
+		logging.Error("failed to save user channel name preference", "module", "jointocreate", "error", err)
 	}
 }
 
@@ -111,11 +125,15 @@ func (m *JoinToCreate) handleChannelDelete(s *discordgo.Session, cd *discordgo.C
 	ctx := context.Background()
 
 	// Silently delete from active channels — if it's not there, that's fine
-	if err := m.queries.DeleteJTCActiveChannel(ctx, cd.ID); err != nil {
+	if err := db.WithRetry(ctx, func(ctx context.Context) error {
+		return m.queries.DeleteJTCActiveChannel(ctx, cd.ID)
+	}, db.DefaultRetryConfig()); err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("[jointocreate] error cleaning up deleted channel %s: %v", cd.ID, err)
+			logging.Error("error cleaning up deleted channel", "module", "jointocreate", "channel_id", cd.ID, "error", err)
 		}
 	}
+	// Also invalidate parent channel cache if this channel was a parent
+	m.invalidateParentChannel(cd.ID)
 }
 
 // countUsersInChannel returns the number of users currently in a voice channel.
@@ -150,7 +168,12 @@ func (m *JoinToCreate) countUsersInChannel(s *discordgo.Session, guildID, channe
 // maybeCleanupChannel deletes a temp channel from Discord and DB if it's empty.
 func (m *JoinToCreate) maybeCleanupChannel(ctx context.Context, s *discordgo.Session, channelID string) {
 	// Is it an active JTC channel?
-	active, err := m.queries.GetJTCActiveChannel(ctx, channelID)
+	var active dbsqlc.JtcActiveChannel
+	err := db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		active, innerErr = m.queries.GetJTCActiveChannel(ctx, channelID)
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		return // not a JTC active channel
 	}
@@ -161,8 +184,10 @@ func (m *JoinToCreate) maybeCleanupChannel(ctx context.Context, s *discordgo.Ses
 		// If we can't get voice states, fall back to the old method
 		ch, err := s.Channel(channelID)
 		if err != nil {
-			// Channel might already be gone — clean up DB
-			_ = m.queries.DeleteJTCActiveChannel(ctx, channelID)
+		// Channel might already be gone — clean up DB
+		_ = db.WithRetry(ctx, func(ctx context.Context) error {
+			return m.queries.DeleteJTCActiveChannel(ctx, channelID)
+		}, db.DefaultRetryConfig())
 			return
 		}
 		userCount = len(ch.Members)
@@ -175,12 +200,14 @@ func (m *JoinToCreate) maybeCleanupChannel(ctx context.Context, s *discordgo.Ses
 
 	// Delete from Discord
 	if _, err := s.ChannelDelete(channelID); err != nil {
-		log.Printf("[jointocreate] failed to delete empty channel %s: %v", channelID, err)
+		logging.Error("failed to delete empty channel", "module", "jointocreate", "channel_id", channelID, "error", err)
 	}
 
 	// Remove from DB
-	if err := m.queries.DeleteJTCActiveChannel(ctx, channelID); err != nil {
-		log.Printf("[jointocreate] failed to remove active channel %s from db: %v", channelID, err)
+	if err := db.WithRetry(ctx, func(ctx context.Context) error {
+		return m.queries.DeleteJTCActiveChannel(ctx, channelID)
+	}, db.DefaultRetryConfig()); err != nil {
+		logging.Error("failed to remove active channel from db", "module", "jointocreate", "channel_id", channelID, "error", err)
 	}
 }
 
@@ -188,10 +215,15 @@ func (m *JoinToCreate) maybeCleanupChannel(ctx context.Context, s *discordgo.Ses
 // Priority: saved custom name > server nickname > global display name > username.
 func (m *JoinToCreate) resolveChannelName(ctx context.Context, s *discordgo.Session, guildID, userID string) string {
 	// Check for a saved preference first
-	settings, err := m.queries.GetJTCUserSettings(ctx, dbsqlc.GetJTCUserSettingsParams{
-		GuildID: guildID,
-		UserID:  userID,
-	})
+	var settings dbsqlc.JtcUserSetting
+	err := db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		settings, innerErr = m.queries.GetJTCUserSettings(ctx, dbsqlc.GetJTCUserSettingsParams{
+			GuildID: guildID,
+			UserID:  userID,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err == nil && settings.CustomName.Valid && settings.CustomName.String != "" {
 		return settings.CustomName.String
 	}

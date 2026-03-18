@@ -3,10 +3,10 @@ package jointocreate
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/bwmarrin/discordgo"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 // handleInteraction routes slash command interactions for this module.
@@ -79,25 +79,27 @@ func (m *JoinToCreate) handleSetup(s *discordgo.Session, i *discordgo.Interactio
 		ParentID: categoryID,
 	})
 	if err != nil {
-		log.Printf("[jointocreate] failed to create channel: %v", err)
+		logging.Error("failed to create channel", "module", "jointocreate", "error", err)
 		respondEphemeral(s, i, "❌ Failed to create the voice channel. Make sure I have the **Manage Channels** permission.")
 		return
 	}
 
 	// Save to database
-	_, err = m.queries.CreateJTCParentChannel(ctx, dbsqlc.CreateJTCParentChannelParams{
+	parent, err := m.queries.CreateJTCParentChannel(ctx, dbsqlc.CreateJTCParentChannelParams{
 		GuildID:     i.GuildID,
 		ChannelID:   ch.ID,
 		CategoryID:  categoryID,
 		ChannelName: channelName,
 	})
 	if err != nil {
-		log.Printf("[jointocreate] failed to save parent channel: %v", err)
+		logging.Error("failed to save parent channel", "module", "jointocreate", "error", err)
 		// Clean up the Discord channel we just created
 		_, _ = s.ChannelDelete(ch.ID)
 		respondEphemeral(s, i, "❌ Failed to save the channel configuration to the database.")
 		return
 	}
+	// Add to cache
+	m.cache.Set(parent.ChannelID, &parent)
 
 	respondEphemeral(s, i, fmt.Sprintf("✅ JoinToCreate channel **%s** has been set up in **%s**! Users who join it will get their own temporary channel.", channelName, category.Name))
 }
@@ -109,8 +111,8 @@ func (m *JoinToCreate) handleRemove(s *discordgo.Session, i *discordgo.Interacti
 	channelID := sub.Options[0].ChannelValue(s).ID
 
 	// Check it's actually a JTC parent channel
-	_, err := m.queries.GetJTCParentChannel(ctx, channelID)
-	if err != nil {
+	parent := m.getParentChannel(ctx, channelID)
+	if parent == nil {
 		respondEphemeral(s, i, "❌ That channel is not a JoinToCreate parent channel.")
 		return
 	}
@@ -123,10 +125,12 @@ func (m *JoinToCreate) handleRemove(s *discordgo.Session, i *discordgo.Interacti
 		respondEphemeral(s, i, "❌ Failed to remove the channel from the database.")
 		return
 	}
+	// Invalidate cache
+	m.invalidateParentChannel(channelID)
 
 	// Delete the Discord channel
 	if _, err := s.ChannelDelete(channelID); err != nil {
-		log.Printf("[jointocreate] failed to delete Discord channel %s: %v", channelID, err)
+		logging.Error("failed to delete Discord channel", "module", "jointocreate", "channel_id", channelID, "error", err)
 	}
 
 	respondEphemeral(s, i, "✅ JoinToCreate parent channel removed successfully.")

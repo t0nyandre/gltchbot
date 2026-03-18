@@ -2,11 +2,11 @@ package reactionroles
 
 import (
 	"context"
-	"log"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgxpool"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 const moduleName = "reactionroles"
@@ -112,17 +112,17 @@ func (m *ReactionRoles) RegisterHandlers(s *discordgo.Session) {
 }
 
 // OnEnable is called when the module is enabled for a guild.
-func (m *ReactionRoles) OnEnable(ctx context.Context, db *pgxpool.Pool, guildID string) error {
-	log.Printf("[reactionroles] enabled for guild %s", guildID)
+func (m *ReactionRoles) OnEnable(ctx context.Context, guildID string) error {
+	logging.Info("enabled for guild", "module", "reactionroles", "guild_id", guildID)
 	return nil
 }
 
 // OnDisable is called when the module is disabled for a guild.
-func (m *ReactionRoles) OnDisable(ctx context.Context, db *pgxpool.Pool, guildID string) error {
-	log.Printf("[reactionroles] disabled for guild %s", guildID)
+func (m *ReactionRoles) OnDisable(ctx context.Context, guildID string) error {
+	logging.Info("disabled for guild", "module", "reactionroles", "guild_id", guildID)
 	// Clean up all reaction roles for this guild when module is disabled
 	if err := m.queries.DeleteAllReactionRolesForGuild(ctx, guildID); err != nil {
-		log.Printf("[reactionroles] error cleaning up reaction roles for guild %s: %v", guildID, err)
+		logging.Error("error cleaning up reaction roles for guild", "module", "reactionroles", "guild_id", guildID, "error", err)
 	}
 	return nil
 }
