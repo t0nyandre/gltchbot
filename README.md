@@ -55,6 +55,29 @@ cp .env.example .env
 # Edit .env with your Discord token, app ID, DB password, and API key
 ```
 
+#### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DISCORD_TOKEN` | **required** | Discord bot token |
+| `DISCORD_APP_ID` | **required** | Discord application ID |
+| `DISCORD_DEV_GUILD_ID` | empty | Developer guild ID for guild-specific commands (optional) |
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `DB_USER` | `gltchbot` | PostgreSQL user |
+| `DB_PASSWORD` | **required** | PostgreSQL password |
+| `DB_NAME` | `gltchbot` | Database name |
+| `DB_SSLMODE` | `disable` | PostgreSQL SSL mode |
+| `DB_MAX_CONNS` | `10` | Maximum number of database connections in pool |
+| `DB_MIN_CONNS` | `2` | Minimum number of idle connections in pool |
+| `DB_MAX_CONN_LIFETIME` | `1h` | Maximum lifetime of a connection |
+| `DB_MAX_CONN_IDLE_TIME` | `30m` | Maximum idle time of a connection |
+| `API_PORT` | `8080` | HTTP API port |
+| `API_KEY` | **required** | API key for securing endpoints |
+| `BOT_STATUS` | `online` | Discord bot status (online, idle, dnd, invisible) |
+| `BOT_ACTIVITY_TYPE` | `watching` | Activity type (playing, streaming, listening, watching, competing) |
+| `BOT_ACTIVITY_TEXT` | `over your channels` | Activity text |
+
 ### 2. Run with Docker Compose
 
 ```bash
@@ -91,8 +114,8 @@ type Module interface {
     Description() string
     Commands() []*discordgo.ApplicationCommand
     RegisterHandlers(s *discordgo.Session)
-    OnEnable(ctx context.Context, db *pgxpool.Pool, guildID string) error
-    OnDisable(ctx context.Context, db *pgxpool.Pool, guildID string) error
+    OnEnable(ctx context.Context, guildID string) error
+    OnDisable(ctx context.Context, guildID string) error
 }
 ```
 
