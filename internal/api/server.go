@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,6 +9,7 @@ import (
 	"github.com/t0nyandre/gltchbot/internal/api/routes"
 	"github.com/t0nyandre/gltchbot/internal/bot/modules"
 	"github.com/t0nyandre/gltchbot/internal/config"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 )
 
@@ -47,8 +47,11 @@ func New(cfg *config.Config, db *pgxpool.Pool, registry *modules.Registry) *Serv
 	mux.HandleFunc("POST /api/guilds/{guildId}/modules/jointocreate/parents", jtcHandler.AddParentChannel)
 	mux.HandleFunc("DELETE /api/guilds/{guildId}/modules/jointocreate/parents/{channelId}", jtcHandler.DeleteParentChannel)
 
-	// Wrap the API routes with API key middleware
-	authHandler := middleware.APIKey(cfg.APIKey)(mux)
+	// Create middleware chain: recovery → logging → auth → routes
+	handler := mux
+	handler = middleware.APIKey(cfg.APIKey)(handler)
+	handler = middleware.Logging(nil)(handler)
+	handler = middleware.Recovery(nil)(handler)
 
 	// Top-level mux: health is unauthenticated, everything else requires a key
 	root := http.NewServeMux()
@@ -56,7 +59,7 @@ func New(cfg *config.Config, db *pgxpool.Pool, registry *modules.Registry) *Serv
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
-	root.Handle("/", authHandler)
+	root.Handle("/", handler)
 
 	return &Server{
 		cfg:      cfg,
@@ -70,7 +73,7 @@ func New(cfg *config.Config, db *pgxpool.Pool, registry *modules.Registry) *Serv
 
 // Start begins listening for HTTP requests.
 func (s *Server) Start() error {
-	log.Printf("API server listening on :%d", s.cfg.APIPort)
+	logging.Info("API server starting", "port", s.cfg.APIPort)
 	return s.server.ListenAndServe()
 }
 

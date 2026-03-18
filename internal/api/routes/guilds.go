@@ -1,9 +1,11 @@
 package routes
 
 import (
-	"encoding/json"
 	"net/http"
 
+	"github.com/t0nyandre/gltchbot/internal/api/pagination"
+	"github.com/t0nyandre/gltchbot/internal/api/response"
+	"github.com/t0nyandre/gltchbot/internal/api/validation"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 )
 
@@ -20,36 +22,41 @@ func NewGuildHandler(queries *dbsqlc.Queries) *GuildHandler {
 // ListGuilds returns all guilds the bot is in.
 // GET /api/guilds
 func (h *GuildHandler) ListGuilds(w http.ResponseWriter, r *http.Request) {
-	guilds, err := h.queries.ListGuilds(r.Context())
+	// Parse pagination parameters
+	pagination := pagination.ParseQuery(r)
+	
+	// Get total count
+	total, err := h.queries.CountGuilds(r.Context())
 	if err != nil {
-		jsonError(w, "failed to fetch guilds", http.StatusInternalServerError)
+		response.InternalServerError(w, "failed to count guilds")
 		return
 	}
-	jsonOK(w, guilds)
+	
+	// Fetch paginated guilds
+	guilds, err := h.queries.ListGuildsPaginated(r.Context(), int32(pagination.Limit), int32(pagination.Offset))
+	if err != nil {
+		response.InternalServerError(w, "failed to fetch guilds")
+		return
+	}
+	
+	// Return paginated response
+	pagination.WritePaginatedResponse(w, guilds, int(total), pagination)
 }
 
 // GetGuild returns a single guild by ID.
 // GET /api/guilds/{guildId}
 func (h *GuildHandler) GetGuild(w http.ResponseWriter, r *http.Request) {
 	guildID := r.PathValue("guildId")
-	guild, err := h.queries.GetGuild(r.Context(), guildID)
-	if err != nil {
-		jsonError(w, "guild not found", http.StatusNotFound)
+	if err := validation.ValidateGuildID(guildID); err != nil {
+		response.BadRequest(w, "invalid guild ID: "+err.Error())
 		return
 	}
-	jsonOK(w, guild)
+	guild, err := h.queries.GetGuild(r.Context(), guildID)
+	if err != nil {
+		response.NotFound(w, "guild not found")
+		return
+	}
+	response.OK(w, guild)
 }
 
-// jsonOK writes a 200 JSON response.
-func jsonOK(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(v)
-}
 
-// jsonError writes a JSON error response.
-func jsonError(w http.ResponseWriter, msg string, code int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
-}
