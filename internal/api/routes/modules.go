@@ -6,6 +6,7 @@ import (
 
 	"github.com/t0nyandre/gltchbot/internal/api/response"
 	"github.com/t0nyandre/gltchbot/internal/api/validation"
+	"github.com/t0nyandre/gltchbot/internal/audit"
 	"github.com/t0nyandre/gltchbot/internal/bot/modules"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 )
@@ -32,6 +33,11 @@ func (h *ModuleHandler) ListGuildModules(w http.ResponseWriter, r *http.Request)
 		response.BadRequest(w, "invalid guild ID: "+err.Error())
 		return
 	}
+	// Audit log: sensitive data read
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
+		"guild_id": guildID,
+		"resource": "guild_modules",
+	}))
 	mods, err := h.queries.ListGuildModules(r.Context(), guildID)
 	if err != nil {
 		response.InternalServerError(w, "failed to fetch modules")
@@ -53,6 +59,13 @@ func (h *ModuleHandler) GetGuildModule(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, err.Error())
 		return
 	}
+
+	// Audit log: sensitive data read
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
+		"guild_id": guildID,
+		"module":   moduleName,
+		"resource": "guild_module",
+	}))
 
 	mod, err := h.queries.GetGuildModule(r.Context(), dbsqlc.GetGuildModuleParams{
 		GuildID: guildID,
@@ -94,11 +107,21 @@ func (h *ModuleHandler) UpdateGuildModule(w http.ResponseWriter, r *http.Request
 			response.InternalServerError(w, "failed to enable module: "+err.Error())
 			return
 		}
+		// Audit log
+		audit.LogEvent(ctx, audit.EventModuleEnabled, validation.SanitizeLogDetails(map[string]any{
+			"guild_id": guildID,
+			"module":   moduleName,
+		}))
 	} else {
 		if err := h.registry.DisableForGuild(ctx, moduleName, guildID); err != nil {
 			response.InternalServerError(w, "failed to disable module: "+err.Error())
 			return
 		}
+		// Audit log
+		audit.LogEvent(ctx, audit.EventModuleDisabled, validation.SanitizeLogDetails(map[string]any{
+			"guild_id": guildID,
+			"module":   moduleName,
+		}))
 	}
 
 	response.OK(w, map[string]any{"guild_id": guildID, "module": moduleName, "enabled": body.Enabled})

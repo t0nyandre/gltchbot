@@ -7,6 +7,7 @@ import (
 	"github.com/t0nyandre/gltchbot/internal/api/pagination"
 	"github.com/t0nyandre/gltchbot/internal/api/response"
 	"github.com/t0nyandre/gltchbot/internal/api/validation"
+	"github.com/t0nyandre/gltchbot/internal/audit"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 )
 
@@ -29,6 +30,12 @@ func (h *JTCHandler) GetJTCConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
+	// Audit log: sensitive data read
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
+		"guild_id": guildID,
+		"resource": "jtc_config",
+	}))
+
 	// Parse pagination parameters
 	paginationParams := pagination.ParseQuery(r)
 	
@@ -117,6 +124,14 @@ func (h *JTCHandler) AddParentChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Audit log: sensitive data write
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataWrite, validation.SanitizeLogDetails(map[string]any{
+		"guild_id":   guildID,
+		"channel_id": body.ChannelID,
+		"resource":   "jtc_parent_channel",
+		"action":     "create",
+	}))
+
 	response.Created(w, parent)
 }
 
@@ -141,6 +156,14 @@ func (h *JTCHandler) DeleteParentChannel(w http.ResponseWriter, r *http.Request)
 		response.InternalServerError(w, "failed to delete parent channel")
 		return
 	}
+
+	// Audit log: sensitive data write
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataWrite, validation.SanitizeLogDetails(map[string]any{
+		"guild_id":   guildID,
+		"channel_id": channelID,
+		"resource":   "jtc_parent_channel",
+		"action":     "delete",
+	}))
 
 	response.NoContent(w)
 }

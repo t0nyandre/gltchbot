@@ -42,6 +42,7 @@ func main() {
 	if err != nil {
 		logging.Fatalf("Failed to load config: %v", err)
 	}
+	config.ValidateConfig(cfg)
 
 	if cfg.DiscordToken == "" {
 		logging.Fatal("Error: DISCORD_TOKEN environment variable is required")

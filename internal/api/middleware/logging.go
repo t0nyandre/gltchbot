@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/t0nyandre/gltchbot/internal/api/validation"
 	"github.com/t0nyandre/gltchbot/internal/logging"
 	"log/slog"
 )
@@ -29,9 +30,9 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 			reqLogger := logger.With(
 				"request_id", requestID,
 				"method", r.Method,
-				"path", r.URL.Path,
-				"remote_addr", r.RemoteAddr,
-				"user_agent", r.UserAgent(),
+				"path", validation.SanitizeForLog(r.URL.Path),
+				"remote_addr", validation.SanitizeForLog(r.RemoteAddr),
+				"user_agent", validation.SanitizeForLog(r.UserAgent()),
 			)
 			
 			// Add request ID to response headers

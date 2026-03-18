@@ -6,6 +6,7 @@ import (
 	"github.com/t0nyandre/gltchbot/internal/api/pagination"
 	"github.com/t0nyandre/gltchbot/internal/api/response"
 	"github.com/t0nyandre/gltchbot/internal/api/validation"
+	"github.com/t0nyandre/gltchbot/internal/audit"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 )
 
@@ -24,6 +25,11 @@ func NewGuildHandler(queries *dbsqlc.Queries) *GuildHandler {
 func (h *GuildHandler) ListGuilds(w http.ResponseWriter, r *http.Request) {
 	// Parse pagination parameters
 	pagination := pagination.ParseQuery(r)
+	
+	// Audit log: sensitive data read
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
+		"resource": "guilds",
+	}))
 	
 	// Get total count
 	total, err := h.queries.CountGuilds(r.Context())
@@ -51,6 +57,11 @@ func (h *GuildHandler) GetGuild(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, "invalid guild ID: "+err.Error())
 		return
 	}
+	// Audit log: sensitive data read
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
+		"guild_id": guildID,
+		"resource": "guild",
+	}))
 	guild, err := h.queries.GetGuild(r.Context(), guildID)
 	if err != nil {
 		response.NotFound(w, "guild not found")

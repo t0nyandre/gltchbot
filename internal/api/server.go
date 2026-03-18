@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/t0nyandre/gltchbot/internal/api/middleware"
 	"github.com/t0nyandre/gltchbot/internal/api/routes"
+	"github.com/t0nyandre/gltchbot/internal/audit"
 	"github.com/t0nyandre/gltchbot/internal/bot/modules"
 	"github.com/t0nyandre/gltchbot/internal/config"
 	"github.com/t0nyandre/gltchbot/internal/logging"
@@ -47,28 +48,64 @@ func New(cfg *config.Config, db *pgxpool.Pool, registry *modules.Registry) *Serv
 	mux.HandleFunc("POST /api/guilds/{guildId}/modules/jointocreate/parents", jtcHandler.AddParentChannel)
 	mux.HandleFunc("DELETE /api/guilds/{guildId}/modules/jointocreate/parents/{channelId}", jtcHandler.DeleteParentChannel)
 
-	// Create middleware chain: recovery → logging → auth → routes
-	handler := mux
-	handler = middleware.APIKey(cfg.APIKey)(handler)
-	handler = middleware.Logging(nil)(handler)
-	handler = middleware.Recovery(nil)(handler)
+	// Create middleware chain for API routes: auth → audit → routes
+	apiHandler := mux
+	apiHandler = audit.Middleware(nil)(apiHandler)
+	apiHandler = middleware.APIKey(cfg.APIKeys, cfg.OldAPIKeys)(apiHandler)
 
 	// Top-level mux: health is unauthenticated, everything else requires a key
 	root := http.NewServeMux()
-	root.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+	root.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		// Remove server header
+		w.Header().Set("Server", "")
+		// Prevent caching
+		w.Header().Set("Cache-Control", "no-store, max-age=0")
+		// Only GET method allowed
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_, _ = w.Write([]byte(`{"status":"error","message":"method not allowed"}`))
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
-	root.Handle("/", handler)
+	root.Handle("/", apiHandler)
+
+	// Apply common middleware to all routes (including /health):
+	// logging → recovery → size limit → rate limit → routes
+	// Note: Logging is outermost to capture all requests
+	// Recovery wraps size/rate limits to catch panics
+	// Size limit before rate limit to reject oversized requests early
+	commonHandler := root
+	commonHandler = middleware.Logging(nil)(commonHandler)
+	commonHandler = middleware.Recovery(nil)(commonHandler)
+	commonHandler = middleware.SizeLimit(cfg.RequestSizeLimitBytes)(commonHandler)
+	commonHandler = middleware.RateLimit(cfg.APIRateLimitGlobal, cfg.APIRateLimitAuth, cfg.APIRateLimitUnauth, cfg.APIRateLimitBurst)(commonHandler)
+
+	// Apply security headers to all routes (including /health)
+	securedHandler := middleware.Security(cfg.SecurityHSTSMaxAge, cfg.SecurityCSP, cfg.SecurityPermissionsPolicy)(commonHandler)
+
+	// Apply CORS headers to all routes (including /health)
+	corsHandler := middleware.CORS(
+		cfg.CORSAllowedOrigins,
+		cfg.CORSAllowedMethods,
+		cfg.CORSAllowedHeaders,
+		cfg.CORSExposedHeaders,
+		cfg.CORSMaxAge,
+		cfg.CORSAllowCredentials,
+	)(securedHandler)
 
 	return &Server{
 		cfg:      cfg,
 		registry: registry,
 		server: &http.Server{
 			Addr:    fmt.Sprintf(":%d", cfg.APIPort),
-			Handler: root,
+			Handler: corsHandler,
 		},
 	}
+
 }
 
 // Start begins listening for HTTP requests.

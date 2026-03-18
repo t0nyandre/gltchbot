@@ -22,6 +22,8 @@ var (
 
 	// moduleNameRegex validates module names (alphanumeric and underscores)
 	moduleNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+	// uuidRegex validates UUID format (with or without hyphens)
+	uuidRegex = regexp.MustCompile(`^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$`)
 )
 
 // ValidateDiscordID validates a Discord snowflake ID.
@@ -67,6 +69,18 @@ func ValidateRoleID(id string) error {
 // ValidateMessageID validates a message ID.
 func ValidateMessageID(id string) error {
 	return ValidateDiscordID(id)
+}
+
+// ValidateUUID validates a UUID string.
+// Accepts both hyphenated and non-hyphenated versions (lowercase or uppercase).
+func ValidateUUID(id string) error {
+	if id == "" {
+		return errors.New("UUID cannot be empty")
+	}
+	if !uuidRegex.MatchString(id) {
+		return errors.New("invalid UUID format")
+	}
+	return nil
 }
 
 // ValidateRequiredString validates that a string field is not empty.

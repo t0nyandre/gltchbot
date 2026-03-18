@@ -20,6 +20,7 @@ func main() {
 	if err != nil {
 		logging.Fatalf("failed to load config: %v", err)
 	}
+	config.ValidateConfig(cfg)
 
 	ctx := context.Background()
 
