@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/bwmarrin/discordgo"
-	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 	"github.com/t0nyandre/gltchbot/internal/db"
+	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 )
 
 // handleGuildMemberAdd is called when a user joins a guild.
@@ -196,7 +196,7 @@ func (m *AutoRole) handleMessageReactionAdd(s *discordgo.Session, mr *discordgo.
 
 	// Check if module is enabled for this guild
 	var enabled bool
-	err := db.WithRetry(ctx, func(ctx context.Context) error {
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
 		var innerErr error
 		enabled, innerErr = m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
 			GuildID: mr.GuildID,

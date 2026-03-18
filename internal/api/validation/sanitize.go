@@ -3,7 +3,6 @@ package validation
 import (
 	"html"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -22,11 +21,11 @@ func SanitizeHTML(text string) string {
 // contain ".." components or absolute paths. If the path attempts traversal,
 // an empty string is returned.
 func SanitizePath(path string) string {
-	cleaned := filepath.Clean(path)
-	// Check for directory traversal attempts
-	if strings.Contains(cleaned, "..") || filepath.IsAbs(cleaned) {
+	// Check for directory traversal attempts before cleaning
+	if strings.Contains(path, "..") || filepath.IsAbs(path) {
 		return ""
 	}
+	cleaned := filepath.Clean(path)
 	return cleaned
 }
 

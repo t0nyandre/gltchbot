@@ -2,7 +2,6 @@ package response
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
@@ -54,7 +53,7 @@ func statusToDefaultCode(status int) string {
 		return "conflict"
 	case http.StatusUnprocessableEntity:
 		return "validation_error"
-	case http.StatusPayloadTooLarge:
+	case http.StatusRequestEntityTooLarge:
 		return "payload_too_large"
 	case http.StatusTooManyRequests:
 		return "rate_limit_exceeded"

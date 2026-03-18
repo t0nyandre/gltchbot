@@ -2,11 +2,10 @@ package db
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -77,7 +76,7 @@ func WithRetry(ctx context.Context, fn RetryableFunc, config RetryConfig) error 
 // isRetryableError checks if the error matches one of the retryable error codes.
 func isRetryableError(err error, retryableErrs []string) bool {
 	var pgErr *pgconn.PgError
-	if !(pgx.As(err, &pgErr)) {
+	if !(errors.As(err, &pgErr)) {
 		// Not a PostgreSQL error, check if it's a connection error etc.
 		// For simplicity, we'll treat network/timeout errors as retryable
 		// but for now we only retry PostgreSQL errors.

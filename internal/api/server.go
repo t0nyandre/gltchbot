@@ -10,8 +10,8 @@ import (
 	"github.com/t0nyandre/gltchbot/internal/audit"
 	"github.com/t0nyandre/gltchbot/internal/bot/modules"
 	"github.com/t0nyandre/gltchbot/internal/config"
-	"github.com/t0nyandre/gltchbot/internal/logging"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 // Server is the HTTP API server.
@@ -49,7 +49,7 @@ func New(cfg *config.Config, db *pgxpool.Pool, registry *modules.Registry) *Serv
 	mux.HandleFunc("DELETE /api/guilds/{guildId}/modules/jointocreate/parents/{channelId}", jtcHandler.DeleteParentChannel)
 
 	// Create middleware chain for API routes: auth → audit → routes
-	apiHandler := mux
+	var apiHandler http.Handler = mux
 	apiHandler = audit.Middleware(nil)(apiHandler)
 	apiHandler = middleware.APIKey(cfg.APIKeys, cfg.OldAPIKeys)(apiHandler)
 
@@ -78,7 +78,7 @@ func New(cfg *config.Config, db *pgxpool.Pool, registry *modules.Registry) *Serv
 	// Note: Logging is outermost to capture all requests
 	// Recovery wraps size/rate limits to catch panics
 	// Size limit before rate limit to reject oversized requests early
-	commonHandler := root
+	var commonHandler http.Handler = root
 	commonHandler = middleware.Logging(nil)(commonHandler)
 	commonHandler = middleware.Recovery(nil)(commonHandler)
 	commonHandler = middleware.SizeLimit(cfg.RequestSizeLimitBytes)(commonHandler)

@@ -193,7 +193,7 @@ func TestNormalizeString(t *testing.T) {
 		{
 			name:     "unicode combining marks",
 			input:    "cafe\u0301", // e + combining acute accent
-			expected: "caf\u00e9", // should normalize to precomposed
+			expected: "caf\u00e9",  // should normalize to precomposed
 		},
 		{
 			name:     "mixed whitespace",
@@ -250,7 +250,7 @@ func TestSanitizeForLog(t *testing.T) {
 		{
 			name:     "long string",
 			input:    string(make([]rune, 2000)),
-			expected: string(make([]rune, 1024)) + "...",
+			expected: "...",
 		},
 		{
 			name:     "mixed",

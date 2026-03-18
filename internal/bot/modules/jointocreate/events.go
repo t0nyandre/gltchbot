@@ -7,8 +7,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 	"github.com/t0nyandre/gltchbot/internal/db"
+	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
@@ -34,7 +34,7 @@ func (m *JoinToCreate) handleVoiceStateUpdate(s *discordgo.Session, vs *discordg
 
 	// Check that the JTC module is enabled for this guild
 	var enabled bool
-	err = db.WithRetry(ctx, func(ctx context.Context) error {
+	err := db.WithRetry(ctx, func(ctx context.Context) error {
 		var innerErr error
 		enabled, innerErr = m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
 			GuildID: vs.GuildID,
@@ -184,10 +184,10 @@ func (m *JoinToCreate) maybeCleanupChannel(ctx context.Context, s *discordgo.Ses
 		// If we can't get voice states, fall back to the old method
 		ch, err := s.Channel(channelID)
 		if err != nil {
-		// Channel might already be gone — clean up DB
-		_ = db.WithRetry(ctx, func(ctx context.Context) error {
-			return m.queries.DeleteJTCActiveChannel(ctx, channelID)
-		}, db.DefaultRetryConfig())
+			// Channel might already be gone — clean up DB
+			_ = db.WithRetry(ctx, func(ctx context.Context) error {
+				return m.queries.DeleteJTCActiveChannel(ctx, channelID)
+			}, db.DefaultRetryConfig())
 			return
 		}
 		userCount = len(ch.Members)

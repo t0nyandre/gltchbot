@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 // Limiter implements a token bucket rate limiter for a specific key.

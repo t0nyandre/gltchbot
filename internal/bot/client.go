@@ -15,7 +15,7 @@ import (
 
 // Client wraps the discordgo session and the module registry.
 type Client struct {
-	Session  *discordgo.Session
+	Session  *ratelimit.RateLimitedSession
 	Registry *modules.Registry
 	cfg      *config.Config
 	db       *pgxpool.Pool
@@ -64,7 +64,7 @@ func (c *Client) Start(ctx context.Context) error {
 	c.Session.AddHandler(c.onGuildCreate)
 
 	// Register all module event handlers
-	c.Registry.RegisterHandlers(c.Session)
+	c.Registry.RegisterHandlers(c.Session.Session)
 
 	// Open the websocket connection
 	if err := c.Session.Open(); err != nil {
@@ -74,7 +74,7 @@ func (c *Client) Start(ctx context.Context) error {
 	// Register slash commands immediately after connecting so they are always
 	// up to date on every startup — not deferred to the Ready event, which
 	// is not guaranteed to fire again on reconnects.
-	if err := c.Registry.RegisterCommands(c.Session, c.cfg.DiscordAppID, c.cfg.DiscordDevGuildID); err != nil {
+	if err := c.Registry.RegisterCommands(c.Session.Session, c.cfg.DiscordAppID, c.cfg.DiscordDevGuildID); err != nil {
 		logging.Error("failed to register commands", "error", err)
 	}
 
@@ -117,5 +117,3 @@ func (c *Client) onGuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 		logging.Error("failed to upsert guild", "guild_id", g.ID, "error", err)
 	}
 }
-
-

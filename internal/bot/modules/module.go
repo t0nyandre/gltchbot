@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Module is the interface every feature module must implement.

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/t0nyandre/gltchbot/internal/logging"
-	"log/slog"
 )
 
 // CORS returns a middleware that adds CORS headers to HTTP responses.

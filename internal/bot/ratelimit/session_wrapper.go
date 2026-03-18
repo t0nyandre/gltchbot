@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 // RateLimitedSession wraps a discordgo.Session and applies rate limiting to API calls.
@@ -29,10 +28,10 @@ func (r *RateLimitedSession) wait(endpoint string) {
 	_ = r.manager.Wait(ctx, endpoint) // ignore error (timeout or cancel)
 }
 
-// ChannelCreateComplex wraps discordgo.Session.ChannelCreateComplex with rate limiting.
+// ChannelCreateComplex wraps discordgo.Session.GuildChannelCreateComplex with rate limiting.
 func (r *RateLimitedSession) ChannelCreateComplex(guildID string, data discordgo.GuildChannelCreateData) (*discordgo.Channel, error) {
 	r.wait(EndpointChannelCreate)
-	return r.Session.ChannelCreateComplex(guildID, data)
+	return r.Session.GuildChannelCreateComplex(guildID, data)
 }
 
 // GuildChannelCreateComplex wraps discordgo.Session.GuildChannelCreateComplex with rate limiting.
@@ -97,7 +96,7 @@ func (r *RateLimitedSession) MessageReactionAdd(channelID, messageID, emojiID st
 }
 
 // MessageReactionRemove wraps discordgo.Session.MessageReactionRemove with rate limiting.
-func (r *RateLimitedSession) MessageReactionRemove(channelID, messageID, emojiID string) error {
+func (r *RateLimitedSession) MessageReactionRemove(channelID, messageID, emojiID, userID string) error {
 	r.wait(EndpointMessageReactionRemove)
-	return r.Session.MessageReactionRemove(channelID, messageID, emojiID)
+	return r.Session.MessageReactionRemove(channelID, messageID, emojiID, userID)
 }

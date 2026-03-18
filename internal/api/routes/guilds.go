@@ -24,29 +24,29 @@ func NewGuildHandler(queries *dbsqlc.Queries) *GuildHandler {
 // GET /api/guilds
 func (h *GuildHandler) ListGuilds(w http.ResponseWriter, r *http.Request) {
 	// Parse pagination parameters
-	pagination := pagination.ParseQuery(r)
-	
+	params := pagination.ParseQuery(r)
+
 	// Audit log: sensitive data read
 	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
 		"resource": "guilds",
 	}))
-	
+
 	// Get total count
 	total, err := h.queries.CountGuilds(r.Context())
 	if err != nil {
 		response.InternalServerError(w, "failed to count guilds")
 		return
 	}
-	
+
 	// Fetch paginated guilds
-	guilds, err := h.queries.ListGuildsPaginated(r.Context(), int32(pagination.Limit), int32(pagination.Offset))
+	guilds, err := h.queries.ListGuildsPaginated(r.Context(), int32(params.Limit), int32(params.Offset))
 	if err != nil {
 		response.InternalServerError(w, "failed to fetch guilds")
 		return
 	}
-	
+
 	// Return paginated response
-	pagination.WritePaginatedResponse(w, guilds, int(total), pagination)
+	pagination.WritePaginatedResponse(w, guilds, int(total), params)
 }
 
 // GetGuild returns a single guild by ID.
@@ -69,5 +69,3 @@ func (h *GuildHandler) GetGuild(w http.ResponseWriter, r *http.Request) {
 	}
 	response.OK(w, guild)
 }
-
-

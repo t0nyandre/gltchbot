@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/t0nyandre/gltchbot/internal/logging"
-	"log/slog"
 )
 
 // Security returns a middleware that adds security headers to HTTP responses.

@@ -33,7 +33,7 @@ func New(logger *slog.Logger) Auditor {
 // Log logs an audit event.
 func (a *auditorImpl) Log(ctx context.Context, event Event) {
 	event.Timestamp = time.Now().UTC().Format(time.RFC3339Nano)
-	
+
 	// Convert event to slog attributes
 	attrs := []any{
 		slog.String("type", string(event.Type)),
@@ -52,7 +52,7 @@ func (a *auditorImpl) Log(ctx context.Context, event Event) {
 	if len(event.Details) > 0 {
 		attrs = append(attrs, slog.Any("details", event.Details))
 	}
-	
+
 	// Log at Info level (audit events are always considered info level)
 	a.logger.InfoContext(ctx, "audit", attrs...)
 }
@@ -70,9 +70,6 @@ func (a *auditorImpl) LogEvent(ctx context.Context, eventType EventType, details
 // eventFromContext creates an audit event from the request context.
 // It extracts request ID, API key, IP address, user agent, method, and path.
 func (a *auditorImpl) eventFromContext(ctx context.Context, eventType EventType, status int) Event {
-	// Extract request-scoped logger from context to get request ID
-	logger := logging.FromContext(ctx)
-	
 	// Default values
 	requestID := ""
 	apiKey := ""
@@ -80,12 +77,12 @@ func (a *auditorImpl) eventFromContext(ctx context.Context, eventType EventType,
 	userAgent := ""
 	method := ""
 	path := ""
-	
+
 	// The request-scoped logger may have attributes attached.
 	// We could also store request info in context via middleware.
 	// For now, we rely on the auditor middleware to store request info in context.
 	// This method will be called after middleware sets the audit context.
-	
+
 	// Try to get request info from context
 	if ri, ok := RequestInfoFromContext(ctx); ok {
 		requestID = ri.RequestID
@@ -95,14 +92,14 @@ func (a *auditorImpl) eventFromContext(ctx context.Context, eventType EventType,
 		method = ri.Method
 		path = ri.Path
 	}
-	
+
 	event := NewEvent(eventType, requestID, apiKey, ipAddress, userAgent, method, path, status)
-	
+
 	// If user ID is in context, add it
 	if userID, ok := UserIDFromContext(ctx); ok {
 		event.UserID = userID
 	}
-	
+
 	return event
 }
 

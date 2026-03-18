@@ -2,10 +2,8 @@ package ratelimit
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/t0nyandre/gltchbot/internal/logging"
@@ -13,9 +11,9 @@ import (
 
 // Manager manages rate limiters for different Discord API endpoints.
 type Manager struct {
-	mu      sync.RWMutex
+	mu       sync.RWMutex
 	limiters map[string]*Limiter
-	global  *Limiter
+	global   *Limiter
 }
 
 // NewManager creates a new Manager with default limits.
@@ -34,16 +32,16 @@ func NewManager() *Manager {
 	}
 	// Predefined endpoint keys
 	endpoints := map[string]float64{
-		"channel_create":                parseEnvRate("DISCORD_RATE_LIMIT_CHANNEL_CREATE", 2),
-		"channel_delete":                parseEnvRate("DISCORD_RATE_LIMIT_CHANNEL_DELETE", 5),
-		"channel_edit":                  parseEnvRate("DISCORD_RATE_LIMIT_CHANNEL_EDIT", 5),
-		"guild_member_move":             parseEnvRate("DISCORD_RATE_LIMIT_GUILD_MEMBER_MOVE", 10),
-		"message_reaction_add":          parseEnvRate("DISCORD_RATE_LIMIT_MESSAGE_REACTION_ADD", 5),
-		"message_reaction_remove":       parseEnvRate("DISCORD_RATE_LIMIT_MESSAGE_REACTION_REMOVE", 5),
-		"interaction_response":          parseEnvRate("DISCORD_RATE_LIMIT_INTERACTION_RESPONSE", 5),
-		"guild_member":                  parseEnvRate("DISCORD_RATE_LIMIT_GUILD_MEMBER", 10),
-		"guild_member_role_add":         parseEnvRate("DISCORD_RATE_LIMIT_GUILD_MEMBER_ROLE_ADD", 5),
-		"guild":                         parseEnvRate("DISCORD_RATE_LIMIT_GUILD", 5),
+		"channel_create":          parseEnvRate("DISCORD_RATE_LIMIT_CHANNEL_CREATE", 2),
+		"channel_delete":          parseEnvRate("DISCORD_RATE_LIMIT_CHANNEL_DELETE", 5),
+		"channel_edit":            parseEnvRate("DISCORD_RATE_LIMIT_CHANNEL_EDIT", 5),
+		"guild_member_move":       parseEnvRate("DISCORD_RATE_LIMIT_GUILD_MEMBER_MOVE", 10),
+		"message_reaction_add":    parseEnvRate("DISCORD_RATE_LIMIT_MESSAGE_REACTION_ADD", 5),
+		"message_reaction_remove": parseEnvRate("DISCORD_RATE_LIMIT_MESSAGE_REACTION_REMOVE", 5),
+		"interaction_response":    parseEnvRate("DISCORD_RATE_LIMIT_INTERACTION_RESPONSE", 5),
+		"guild_member":            parseEnvRate("DISCORD_RATE_LIMIT_GUILD_MEMBER", 10),
+		"guild_member_role_add":   parseEnvRate("DISCORD_RATE_LIMIT_GUILD_MEMBER_ROLE_ADD", 5),
+		"guild":                   parseEnvRate("DISCORD_RATE_LIMIT_GUILD", 5),
 	}
 	for key, rate := range endpoints {
 		if rate > 0 {
@@ -122,15 +120,15 @@ func (m *Manager) GetEndpointLimit(endpoint string) (ratePerSec float64, burst i
 
 // Endpoint constants
 const (
-	EndpointChannelCreate               = "channel_create"
-	EndpointChannelDelete               = "channel_delete"
-	EndpointChannelEdit                 = "channel_edit"
-	EndpointGuildMemberMove             = "guild_member_move"
-	EndpointMessageReactionAdd          = "message_reaction_add"
-	EndpointMessageReactionRemove       = "message_reaction_remove"
-	EndpointInteractionResponse         = "interaction_response"
-	EndpointGuildMember                 = "guild_member"
-	EndpointGuildMemberRoleAdd          = "guild_member_role_add"
-	EndpointGuild                       = "guild"
-	EndpointChannel                     = "channel"
+	EndpointChannelCreate         = "channel_create"
+	EndpointChannelDelete         = "channel_delete"
+	EndpointChannelEdit           = "channel_edit"
+	EndpointGuildMemberMove       = "guild_member_move"
+	EndpointMessageReactionAdd    = "message_reaction_add"
+	EndpointMessageReactionRemove = "message_reaction_remove"
+	EndpointInteractionResponse   = "interaction_response"
+	EndpointGuildMember           = "guild_member"
+	EndpointGuildMemberRoleAdd    = "guild_member_role_add"
+	EndpointGuild                 = "guild"
+	EndpointChannel               = "channel"
 )

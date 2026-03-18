@@ -40,7 +40,7 @@ func SizeLimit(maxBytes int64) func(http.Handler) http.Handler {
 				)
 				// Close the request body to free resources
 				r.Body.Close()
-				response.Error(w, "request body too large", http.StatusPayloadTooLarge)
+				response.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 				return
 			}
 
@@ -68,7 +68,7 @@ func SizeLimit(maxBytes int64) func(http.Handler) http.Handler {
 					"body_size", len(data),
 					"max_bytes", maxBytes,
 				)
-				response.Error(w, "request body too large", http.StatusPayloadTooLarge)
+				response.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 				return
 			}
 

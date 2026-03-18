@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -85,7 +86,7 @@ func ValidateUUID(id string) error {
 
 // ValidateRequiredString validates that a string field is not empty.
 func ValidateRequiredString(field, value string) error {
-	if value == "" {
+	if strings.TrimSpace(value) == "" {
 		return fmt.Errorf("%s is required", field)
 	}
 	return nil
@@ -123,20 +124,28 @@ func ValidateEmoji(value string) error {
 		if !emojiRegex.MatchString(value) {
 			return errors.New("invalid custom emoji format")
 		}
+		// Extract the numeric ID and validate it's a proper Discord snowflake
+		parts := strings.Split(value, ":")
+		if len(parts) >= 3 {
+			idStr := strings.TrimSuffix(parts[2], ">")
+			if err := ValidateDiscordID(idStr); err != nil {
+				return errors.New("invalid custom emoji ID")
+			}
+		}
 		return nil
 	}
 
 	// Unicode emoji - ensure it's not empty and reasonable length
-	// Discord allows up to 32 characters for custom emoji names, but Unicode emojis are typically 1-2 characters
-	// We'll limit to 32 characters for safety
-	if utf8.RuneCountInString(value) > 32 {
+	// Discord allows up to 31 characters for custom emoji names, but Unicode emojis are typically 1-2 characters
+	// We'll limit to 31 characters for safety
+	if utf8.RuneCountInString(value) > 31 {
 		return errors.New("emoji too long")
 	}
 	return nil
 }
 
 // ValidateModuleName validates a module name.
-// Module names must be alphanumeric with underscores, 1-32 characters.
+// Module names must be alphanumeric with underscores, 1-31 characters.
 func ValidateModuleName(name string) error {
 	if err := ValidateRequiredString("module name", name); err != nil {
 		return err
@@ -144,7 +153,7 @@ func ValidateModuleName(name string) error {
 	if err := ValidateMinLength("module name", name, 1); err != nil {
 		return err
 	}
-	if err := ValidateMaxLength("module name", name, 32); err != nil {
+	if err := ValidateMaxLength("module name", name, 31); err != nil {
 		return err
 	}
 	if !moduleNameRegex.MatchString(name) {
