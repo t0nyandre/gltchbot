@@ -28,7 +28,7 @@ func logStructured(level, module, operation, guildID, userID, message string, da
 	for key, value := range data {
 		args = append(args, key, value)
 	}
-	
+
 	// Call appropriate logging function based on level
 	switch strings.ToUpper(level) {
 	case "DEBUG":

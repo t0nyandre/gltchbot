@@ -13,10 +13,10 @@ type entry[V any] struct {
 
 // TTL is a generic thread-safe TTL cache.
 type TTL[K comparable, V any] struct {
-	mu        sync.RWMutex
-	store     map[K]entry[V]
-	defaultTTL time.Duration
-	stopCh    chan struct{}
+	mu              sync.RWMutex
+	store           map[K]entry[V]
+	defaultTTL      time.Duration
+	stopCh          chan struct{}
 	cleanupInterval time.Duration
 }
 
@@ -25,9 +25,9 @@ type TTL[K comparable, V any] struct {
 // No background cleanup goroutine is started by default; call StartCleanup to start periodic cleanup.
 func New[K comparable, V any](defaultTTL time.Duration) *TTL[K, V] {
 	c := &TTL[K, V]{
-		store:      make(map[K]entry[V]),
-		defaultTTL: defaultTTL,
-		stopCh:     make(chan struct{}),
+		store:           make(map[K]entry[V]),
+		defaultTTL:      defaultTTL,
+		stopCh:          make(chan struct{}),
 		cleanupInterval: time.Minute,
 	}
 	return c

@@ -19,13 +19,13 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			
+
 			// Generate or extract request ID
 			requestID := r.Header.Get("X-Request-ID")
 			if requestID == "" {
 				requestID = logging.GenerateRequestID()
 			}
-			
+
 			// Create request-scoped logger
 			reqLogger := logger.With(
 				"request_id", requestID,
@@ -34,26 +34,26 @@ func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
 				"remote_addr", validation.SanitizeForLog(r.RemoteAddr),
 				"user_agent", validation.SanitizeForLog(r.UserAgent()),
 			)
-			
+
 			// Add request ID to response headers
 			w.Header().Set("X-Request-ID", requestID)
-			
+
 			// Create response writer to capture status code
 			rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-			
+
 			// Add logger to request context
 			ctx := logging.WithContext(r.Context(), reqLogger)
 			r = r.WithContext(ctx)
-			
+
 			// Log request start
 			reqLogger.Info("request started")
-			
+
 			// Process request
 			next.ServeHTTP(rw, r)
-			
+
 			// Calculate duration
 			duration := time.Since(start)
-			
+
 			// Log request completion
 			reqLogger.Info("request completed",
 				"status", rw.statusCode,

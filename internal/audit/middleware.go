@@ -13,7 +13,7 @@ func Middleware(auditor Auditor) func(http.Handler) http.Handler {
 	if auditor == nil {
 		auditor = New(nil)
 	}
-	
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Extract request ID from header or generate
@@ -21,16 +21,16 @@ func Middleware(auditor Auditor) func(http.Handler) http.Handler {
 			if requestID == "" {
 				requestID = logging.GenerateRequestID()
 			}
-			
+
 			// Extract API key from header (masked)
 			apiKey := r.Header.Get("X-API-Key")
-			
+
 			// Get client IP (respect X-Forwarded-For if behind proxy)
 			ipAddress := r.RemoteAddr
 			if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
 				ipAddress = forwarded
 			}
-			
+
 			// Store request info in context
 			info := RequestInfo{
 				RequestID: requestID,
@@ -41,13 +41,13 @@ func Middleware(auditor Auditor) func(http.Handler) http.Handler {
 				Path:      r.URL.Path,
 			}
 			ctx := WithRequestInfo(r.Context(), info)
-			
+
 			// Add auditor to context
 			ctx = WithAuditor(ctx, auditor)
-			
+
 			// Add request ID to response header
 			w.Header().Set("X-Request-ID", requestID)
-			
+
 			// Call next handler with enriched context
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

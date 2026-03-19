@@ -16,7 +16,7 @@ func APIKey(validKeys, oldKeys []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			key := r.Header.Get("X-API-Key")
-			
+
 			// Extract request info for audit logging
 			requestID := r.Header.Get("X-Request-ID")
 			if requestID == "" {
@@ -26,7 +26,7 @@ func APIKey(validKeys, oldKeys []string) func(http.Handler) http.Handler {
 			if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
 				ipAddress = forwarded
 			}
-			
+
 			if key == "" {
 				// Missing API key
 				audit.LogEvent(r.Context(), audit.EventAuthMissingKey, validation.SanitizeLogDetails(map[string]any{
@@ -39,7 +39,7 @@ func APIKey(validKeys, oldKeys []string) func(http.Handler) http.Handler {
 				response.Unauthorized(w, "unauthorized")
 				return
 			}
-			
+
 			// Check against current and old keys
 			matched := false
 			keySource := ""
@@ -72,7 +72,7 @@ func APIKey(validKeys, oldKeys []string) func(http.Handler) http.Handler {
 				response.Unauthorized(w, "unauthorized")
 				return
 			}
-			
+
 			// Authentication successful
 			details := map[string]any{
 				"request_id": requestID,
@@ -86,7 +86,7 @@ func APIKey(validKeys, oldKeys []string) func(http.Handler) http.Handler {
 				details["key_source"] = keySource
 			}
 			audit.LogEvent(r.Context(), audit.EventAuthSuccess, validation.SanitizeLogDetails(details))
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}

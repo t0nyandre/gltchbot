@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/bwmarrin/discordgo"
-	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 	"github.com/t0nyandre/gltchbot/internal/db"
+	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 

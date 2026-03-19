@@ -5,23 +5,23 @@ type EventType string
 
 const (
 	// Authentication events
-	EventAuthSuccess     EventType = "auth_success"
-	EventAuthFailure     EventType = "auth_failure"
-	EventAuthInvalidKey  EventType = "auth_invalid_key"
-	EventAuthMissingKey  EventType = "auth_missing_key"
+	EventAuthSuccess    EventType = "auth_success"
+	EventAuthFailure    EventType = "auth_failure"
+	EventAuthInvalidKey EventType = "auth_invalid_key"
+	EventAuthMissingKey EventType = "auth_missing_key"
 
 	// Admin actions
-	EventModuleEnabled   EventType = "module_enabled"
-	EventModuleDisabled  EventType = "module_disabled"
-	EventModuleConfig    EventType = "module_config_changed"
+	EventModuleEnabled  EventType = "module_enabled"
+	EventModuleDisabled EventType = "module_disabled"
+	EventModuleConfig   EventType = "module_config_changed"
 
 	// Permission changes (future)
-	EventPermissionGranted  EventType = "permission_granted"
-	EventPermissionRevoked  EventType = "permission_revoked"
+	EventPermissionGranted EventType = "permission_granted"
+	EventPermissionRevoked EventType = "permission_revoked"
 
 	// Sensitive data access
-	EventSensitiveDataRead   EventType = "sensitive_data_read"
-	EventSensitiveDataWrite  EventType = "sensitive_data_write"
+	EventSensitiveDataRead  EventType = "sensitive_data_read"
+	EventSensitiveDataWrite EventType = "sensitive_data_write"
 
 	// Security configuration changes
 	EventSecurityConfigChanged EventType = "security_config_changed"
@@ -29,17 +29,17 @@ const (
 
 // Event represents an audit event.
 type Event struct {
-	Type        EventType       `json:"type"`
-	Timestamp   string          `json:"timestamp"`   // ISO8601
-	RequestID   string          `json:"request_id"`  // Correlation ID
-	UserID      string          `json:"user_id"`     // Discord user ID (if available)
-	APIKey      string          `json:"api_key"`     // Masked API key (first 4 chars)
-	IPAddress   string          `json:"ip_address"`
-	UserAgent   string          `json:"user_agent"`
-	Method      string          `json:"method"`
-	Path        string          `json:"path"`
-	Status      int             `json:"status"`
-	Details     map[string]any  `json:"details"`     // Event-specific details
+	Type      EventType      `json:"type"`
+	Timestamp string         `json:"timestamp"`  // ISO8601
+	RequestID string         `json:"request_id"` // Correlation ID
+	UserID    string         `json:"user_id"`    // Discord user ID (if available)
+	APIKey    string         `json:"api_key"`    // Masked API key (first 4 chars)
+	IPAddress string         `json:"ip_address"`
+	UserAgent string         `json:"user_agent"`
+	Method    string         `json:"method"`
+	Path      string         `json:"path"`
+	Status    int            `json:"status"`
+	Details   map[string]any `json:"details"` // Event-specific details
 }
 
 // NewEvent creates a new audit event with common fields.

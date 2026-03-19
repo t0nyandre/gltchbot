@@ -51,15 +51,15 @@ func RateLimit(globalRate, authRate, unauthRate, burstMultiplier float64) func(h
 }
 
 type rateLimiter struct {
-	global           *ratelimit.Limiter
-	globalRate       float64
-	authRate         float64
-	unauthRate       float64
-	burstMultiplier  float64
-	ipLimiters       sync.Map // map[string]*ipLimiter
-	stop             chan struct{}
-	cleanupInterval  time.Duration
-	entryExpiry      time.Duration
+	global          *ratelimit.Limiter
+	globalRate      float64
+	authRate        float64
+	unauthRate      float64
+	burstMultiplier float64
+	ipLimiters      sync.Map // map[string]*ipLimiter
+	stop            chan struct{}
+	cleanupInterval time.Duration
+	entryExpiry     time.Duration
 }
 
 type ipLimiter struct {

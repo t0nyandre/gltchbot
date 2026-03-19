@@ -15,9 +15,9 @@ func TestSecurityHeaders(t *testing.T) {
 		expectedHeaders   map[string]string
 	}{
 		{
-			name:       "default headers",
-			hstsMaxAge: 31536000,
-			csp:        "",
+			name:              "default headers",
+			hstsMaxAge:        31536000,
+			csp:               "",
 			permissionsPolicy: "",
 			expectedHeaders: map[string]string{
 				"Strict-Transport-Security": "max-age=31536000",
@@ -30,23 +30,23 @@ func TestSecurityHeaders(t *testing.T) {
 			},
 		},
 		{
-			name:       "zero HSTS max-age omits header",
-			hstsMaxAge: 0,
-			csp:        "",
+			name:              "zero HSTS max-age omits header",
+			hstsMaxAge:        0,
+			csp:               "",
 			permissionsPolicy: "",
 			expectedHeaders: map[string]string{
-				"X-Frame-Options":           "DENY",
-				"X-Content-Type-Options":    "nosniff",
-				"X-XSS-Protection":          "0",
-				"Referrer-Policy":           "strict-origin-when-cross-origin",
-				"Permissions-Policy":        "camera=(), microphone=(), geolocation=()",
-				"Content-Security-Policy":   "default-src 'self'; style-src 'self' 'unsafe-inline'",
+				"X-Frame-Options":         "DENY",
+				"X-Content-Type-Options":  "nosniff",
+				"X-XSS-Protection":        "0",
+				"Referrer-Policy":         "strict-origin-when-cross-origin",
+				"Permissions-Policy":      "camera=(), microphone=(), geolocation=()",
+				"Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'",
 			},
 		},
 		{
-			name:       "custom CSP and Permissions-Policy",
-			hstsMaxAge: 3600,
-			csp:        "default-src 'none'",
+			name:              "custom CSP and Permissions-Policy",
+			hstsMaxAge:        3600,
+			csp:               "default-src 'none'",
 			permissionsPolicy: "camera=(self), microphone=()",
 			expectedHeaders: map[string]string{
 				"Strict-Transport-Security": "max-age=3600",
