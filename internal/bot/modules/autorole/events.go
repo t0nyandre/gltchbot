@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/t0nyandre/gltchbot/internal/db"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 )
 
@@ -17,30 +18,43 @@ func (m *AutoRole) handleGuildMemberAdd(s *discordgo.Session, gm *discordgo.Guil
 	ctx := context.Background()
 
 	// Check if module is enabled for this guild
-	enabled, err := m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
-		GuildID: gm.GuildID,
-		Name:    moduleName,
-	})
+	var enabled bool
+	err := db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		enabled, innerErr = m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
+			GuildID: gm.GuildID,
+			Name:    moduleName,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil || !enabled {
 		return
 	}
 
 	// Check if user has already triggered 'join' for this guild
-	_, err = m.queries.GetUserTrigger(ctx, dbsqlc.GetUserTriggerParams{
-		GuildID: gm.GuildID,
-		UserID:  gm.User.ID,
-		Trigger: "join",
-	})
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		_, innerErr := m.queries.GetUserTrigger(ctx, dbsqlc.GetUserTriggerParams{
+			GuildID: gm.GuildID,
+			UserID:  gm.User.ID,
+			Trigger: "join",
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err == nil {
 		// User already triggered join before (re-join?), do nothing
 		return
 	}
 
 	// Get all auto roles for this guild with trigger 'join'
-	autoRoles, err := m.queries.ListAutoRolesByGuildAndTrigger(ctx, dbsqlc.ListAutoRolesByGuildAndTriggerParams{
-		GuildID: gm.GuildID,
-		Trigger: "join",
-	})
+	var autoRoles []dbsqlc.AutoRole
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		autoRoles, innerErr = m.queries.ListAutoRolesByGuildAndTrigger(ctx, dbsqlc.ListAutoRolesByGuildAndTriggerParams{
+			GuildID: gm.GuildID,
+			Trigger: "join",
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		logError("guild_member_add", gm.GuildID, gm.User.ID, "failed to list auto roles", err, nil)
 		return
@@ -63,11 +77,13 @@ func (m *AutoRole) handleGuildMemberAdd(s *discordgo.Session, gm *discordgo.Guil
 	}
 
 	// Record the trigger
-	err = m.queries.CreateUserTrigger(ctx, dbsqlc.CreateUserTriggerParams{
-		GuildID: gm.GuildID,
-		UserID:  gm.User.ID,
-		Trigger: "join",
-	})
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		return m.queries.CreateUserTrigger(ctx, dbsqlc.CreateUserTriggerParams{
+			GuildID: gm.GuildID,
+			UserID:  gm.User.ID,
+			Trigger: "join",
+		})
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		logError("guild_member_add", gm.GuildID, gm.User.ID, "failed to record user trigger", err, nil)
 	}
@@ -83,30 +99,43 @@ func (m *AutoRole) handleMessageCreate(s *discordgo.Session, mc *discordgo.Messa
 	ctx := context.Background()
 
 	// Check if module is enabled for this guild
-	enabled, err := m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
-		GuildID: mc.GuildID,
-		Name:    moduleName,
-	})
+	var enabled bool
+	err := db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		enabled, innerErr = m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
+			GuildID: mc.GuildID,
+			Name:    moduleName,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil || !enabled {
 		return
 	}
 
 	// Check if user has already triggered 'first_message' for this guild
-	_, err = m.queries.GetUserTrigger(ctx, dbsqlc.GetUserTriggerParams{
-		GuildID: mc.GuildID,
-		UserID:  mc.Author.ID,
-		Trigger: "first_message",
-	})
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		_, innerErr := m.queries.GetUserTrigger(ctx, dbsqlc.GetUserTriggerParams{
+			GuildID: mc.GuildID,
+			UserID:  mc.Author.ID,
+			Trigger: "first_message",
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err == nil {
 		// Already triggered
 		return
 	}
 
 	// Get all auto roles for this guild with trigger 'first_message'
-	autoRoles, err := m.queries.ListAutoRolesByGuildAndTrigger(ctx, dbsqlc.ListAutoRolesByGuildAndTriggerParams{
-		GuildID: mc.GuildID,
-		Trigger: "first_message",
-	})
+	var autoRoles []dbsqlc.AutoRole
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		autoRoles, innerErr = m.queries.ListAutoRolesByGuildAndTrigger(ctx, dbsqlc.ListAutoRolesByGuildAndTriggerParams{
+			GuildID: mc.GuildID,
+			Trigger: "first_message",
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		logError("message_create", mc.GuildID, mc.Author.ID, "failed to list auto roles", err, nil)
 		return
@@ -129,11 +158,13 @@ func (m *AutoRole) handleMessageCreate(s *discordgo.Session, mc *discordgo.Messa
 	}
 
 	// Record the trigger
-	err = m.queries.CreateUserTrigger(ctx, dbsqlc.CreateUserTriggerParams{
-		GuildID: mc.GuildID,
-		UserID:  mc.Author.ID,
-		Trigger: "first_message",
-	})
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		return m.queries.CreateUserTrigger(ctx, dbsqlc.CreateUserTriggerParams{
+			GuildID: mc.GuildID,
+			UserID:  mc.Author.ID,
+			Trigger: "first_message",
+		})
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		logError("message_create", mc.GuildID, mc.Author.ID, "failed to record user trigger", err, nil)
 	}
@@ -164,30 +195,43 @@ func (m *AutoRole) handleMessageReactionAdd(s *discordgo.Session, mr *discordgo.
 	ctx := context.Background()
 
 	// Check if module is enabled for this guild
-	enabled, err := m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
-		GuildID: mr.GuildID,
-		Name:    moduleName,
-	})
+	var enabled bool
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		enabled, innerErr = m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
+			GuildID: mr.GuildID,
+			Name:    moduleName,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil || !enabled {
 		return
 	}
 
 	// Check if user has already triggered 'first_reaction' for this guild
-	_, err = m.queries.GetUserTrigger(ctx, dbsqlc.GetUserTriggerParams{
-		GuildID: mr.GuildID,
-		UserID:  mr.UserID,
-		Trigger: "first_reaction",
-	})
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		_, innerErr := m.queries.GetUserTrigger(ctx, dbsqlc.GetUserTriggerParams{
+			GuildID: mr.GuildID,
+			UserID:  mr.UserID,
+			Trigger: "first_reaction",
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err == nil {
 		// Already triggered
 		return
 	}
 
 	// Get all auto roles for this guild with trigger 'first_reaction'
-	autoRoles, err := m.queries.ListAutoRolesByGuildAndTrigger(ctx, dbsqlc.ListAutoRolesByGuildAndTriggerParams{
-		GuildID: mr.GuildID,
-		Trigger: "first_reaction",
-	})
+	var autoRoles []dbsqlc.AutoRole
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		autoRoles, innerErr = m.queries.ListAutoRolesByGuildAndTrigger(ctx, dbsqlc.ListAutoRolesByGuildAndTriggerParams{
+			GuildID: mr.GuildID,
+			Trigger: "first_reaction",
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		logError("message_reaction_add", mr.GuildID, mr.UserID, "failed to list auto roles", err, nil)
 		return
@@ -210,11 +254,13 @@ func (m *AutoRole) handleMessageReactionAdd(s *discordgo.Session, mr *discordgo.
 	}
 
 	// Record the trigger
-	err = m.queries.CreateUserTrigger(ctx, dbsqlc.CreateUserTriggerParams{
-		GuildID: mr.GuildID,
-		UserID:  mr.UserID,
-		Trigger: "first_reaction",
-	})
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		return m.queries.CreateUserTrigger(ctx, dbsqlc.CreateUserTriggerParams{
+			GuildID: mr.GuildID,
+			UserID:  mr.UserID,
+			Trigger: "first_reaction",
+		})
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		logError("message_reaction_add", mr.GuildID, mr.UserID, "failed to record user trigger", err, nil)
 	}

@@ -1,9 +1,12 @@
 package routes
 
 import (
-	"encoding/json"
 	"net/http"
 
+	"github.com/t0nyandre/gltchbot/internal/api/pagination"
+	"github.com/t0nyandre/gltchbot/internal/api/response"
+	"github.com/t0nyandre/gltchbot/internal/api/validation"
+	"github.com/t0nyandre/gltchbot/internal/audit"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 )
 
@@ -20,36 +23,68 @@ func NewGuildHandler(queries *dbsqlc.Queries) *GuildHandler {
 // ListGuilds returns all guilds the bot is in.
 // GET /api/guilds
 func (h *GuildHandler) ListGuilds(w http.ResponseWriter, r *http.Request) {
-	guilds, err := h.queries.ListGuilds(r.Context())
+	// Parse pagination parameters
+	params := pagination.ParseQuery(r)
+
+	// Audit log: sensitive data read
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
+		"resource": "guilds",
+	}))
+
+	// Get total count
+	total, err := h.queries.CountGuilds(r.Context())
 	if err != nil {
-		jsonError(w, "failed to fetch guilds", http.StatusInternalServerError)
+		response.InternalServerError(w, "failed to count guilds")
 		return
 	}
-	jsonOK(w, guilds)
+
+	// Convert pagination parameters to int32 with bounds checking
+	limit32, err := validation.SafeInt32(params.Limit)
+	if err != nil {
+		response.InternalServerError(w, "invalid pagination limit")
+		return
+	}
+	offset32, err := validation.SafeInt32(params.Offset)
+	if err != nil {
+		response.InternalServerError(w, "invalid pagination offset")
+		return
+	}
+
+	// Fetch paginated guilds
+	guilds, err := h.queries.ListGuildsPaginated(r.Context(), limit32, offset32)
+	if err != nil {
+		response.InternalServerError(w, "failed to fetch guilds")
+		return
+	}
+
+	// Convert total count to int with bounds checking
+	totalInt, err := validation.SafeInt(total)
+	if err != nil {
+		response.InternalServerError(w, "total count too large")
+		return
+	}
+
+	// Return paginated response
+	pagination.WritePaginatedResponse(w, guilds, totalInt, params)
 }
 
 // GetGuild returns a single guild by ID.
 // GET /api/guilds/{guildId}
 func (h *GuildHandler) GetGuild(w http.ResponseWriter, r *http.Request) {
 	guildID := r.PathValue("guildId")
-	guild, err := h.queries.GetGuild(r.Context(), guildID)
-	if err != nil {
-		jsonError(w, "guild not found", http.StatusNotFound)
+	if err := validation.ValidateGuildID(guildID); err != nil {
+		response.BadRequest(w, "invalid guild ID: "+err.Error())
 		return
 	}
-	jsonOK(w, guild)
-}
-
-// jsonOK writes a 200 JSON response.
-func jsonOK(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(v)
-}
-
-// jsonError writes a JSON error response.
-func jsonError(w http.ResponseWriter, msg string, code int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	// Audit log: sensitive data read
+	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
+		"guild_id": guildID,
+		"resource": "guild",
+	}))
+	guild, err := h.queries.GetGuild(r.Context(), guildID)
+	if err != nil {
+		response.NotFound(w, "guild not found")
+		return
+	}
+	response.OK(w, guild)
 }

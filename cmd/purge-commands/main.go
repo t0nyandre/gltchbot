@@ -4,11 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/t0nyandre/gltchbot/internal/config"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 func main() {
@@ -30,36 +30,37 @@ func main() {
 
 	// Validate flags
 	if !*global && !*all && *guildID == "" {
-		log.Fatal("Error: You must specify at least one of --guild, --global, or --all. Use --help for usage.")
+		logging.Fatal("Error: You must specify at least one of --guild, --global, or --all. Use --help for usage.")
 	}
 
 	if *all && (*global || *guildID != "") {
-		log.Fatal("Error: --all cannot be used with --guild or --global. Use --help for usage.")
+		logging.Fatal("Error: --all cannot be used with --guild or --global. Use --help for usage.")
 	}
 
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		logging.Fatalf("Failed to load config: %v", err)
 	}
+	config.ValidateConfig(cfg)
 
 	if cfg.DiscordToken == "" {
-		log.Fatal("Error: DISCORD_TOKEN environment variable is required")
+		logging.Fatal("Error: DISCORD_TOKEN environment variable is required")
 	}
 	if cfg.DiscordAppID == "" {
-		log.Fatal("Error: DISCORD_APP_ID environment variable is required")
+		logging.Fatal("Error: DISCORD_APP_ID environment variable is required")
 	}
 
 	// Create Discord session
 	s, err := discordgo.New("Bot " + cfg.DiscordToken)
 	if err != nil {
-		log.Fatalf("Failed to create Discord session: %v", err)
+		logging.Fatalf("Failed to create Discord session: %v", err)
 	}
 	defer s.Close()
 
 	// Open session (needed for API calls)
 	if err := s.Open(); err != nil {
-		log.Fatalf("Failed to open Discord session: %v", err)
+		logging.Fatalf("Failed to open Discord session: %v", err)
 	}
 	defer s.Close()
 
@@ -76,12 +77,12 @@ func main() {
 }
 
 func purgeAllCommands(ctx context.Context, s *discordgo.Session, appID string, dryRun, force bool) {
-	log.Println("Purging ALL commands (global + all guilds)...")
+	logging.Info("Purging ALL commands (global + all guilds)...")
 
 	// Get all guilds the bot is in
 	guilds, err := s.UserGuilds(100, "", "", false)
 	if err != nil {
-		log.Fatalf("Failed to fetch guilds: %v", err)
+		logging.Fatalf("Failed to fetch guilds: %v", err)
 	}
 
 	// Purge global commands first
@@ -89,19 +90,19 @@ func purgeAllCommands(ctx context.Context, s *discordgo.Session, appID string, d
 
 	// Purge commands from each guild
 	for _, guild := range guilds {
-		log.Printf("Purging commands from guild: %s (%s)", guild.Name, guild.ID)
+		logging.Info("Purging commands from guild", "guild_name", guild.Name, "guild_id", guild.ID)
 		purgeGuildCommands(ctx, s, appID, guild.ID, dryRun, true) // force=true
 	}
 
 	if !dryRun {
-		log.Println("✅ All commands purged successfully!")
+		logging.Info("✅ All commands purged successfully!")
 	} else {
-		log.Println("✅ Dry run completed. No commands were actually deleted.")
+		logging.Info("✅ Dry run completed. No commands were actually deleted.")
 	}
 }
 
 func purgeGlobalCommands(ctx context.Context, s *discordgo.Session, appID string, dryRun, force bool) {
-	log.Println("Purging global commands...")
+	logging.Info("Purging global commands...")
 	purgeCommands(ctx, s, appID, "", dryRun, force, "global")
 }
 
@@ -113,7 +114,7 @@ func purgeGuildCommands(ctx context.Context, s *discordgo.Session, appID, guildI
 		guildName = fmt.Sprintf("%s (%s)", guild.Name, guildID)
 	}
 
-	log.Printf("Purging commands from guild: %s", guildName)
+	logging.Info("Purging commands from guild", "guild", guildName)
 	purgeCommands(ctx, s, appID, guildID, dryRun, force, "guild")
 }
 
@@ -121,31 +122,31 @@ func purgeCommands(ctx context.Context, s *discordgo.Session, appID, guildID str
 	// Fetch existing commands
 	commands, err := s.ApplicationCommands(appID, guildID)
 	if err != nil {
-		log.Fatalf("Failed to fetch %s commands: %v", scope, err)
+		logging.Fatalf("Failed to fetch %s commands: %v", scope, err)
 	}
 
 	if len(commands) == 0 {
-		log.Printf("No %s commands found.", scope)
+		logging.Info("No commands found", "scope", scope)
 		return
 	}
 
 	// Show what will be deleted
-	log.Printf("Found %d %s command(s):", len(commands), scope)
+	logging.Info("Found commands", "command_count", len(commands), "scope", scope)
 	for _, cmd := range commands {
-		log.Printf("  - %s (ID: %s)", cmd.Name, cmd.ID)
+		logging.Info("Command", "command_name", cmd.Name, "command_id", cmd.ID)
 	}
 
 	// Ask for confirmation unless force flag is set
 	if !force && !dryRun {
 		if !askForConfirmation(fmt.Sprintf("Delete %d %s command(s)?", len(commands), scope)) {
-			log.Println("Operation cancelled.")
+			logging.Info("Operation cancelled.")
 			return
 		}
 	}
 
 	// Delete commands
 	if dryRun {
-		log.Printf("Dry run: Would delete %d %s command(s)", len(commands), scope)
+		logging.Info("Dry run: Would delete commands", "command_count", len(commands), "scope", scope)
 		return
 	}
 
@@ -153,14 +154,14 @@ func purgeCommands(ctx context.Context, s *discordgo.Session, appID, guildID str
 	for _, cmd := range commands {
 		err := s.ApplicationCommandDelete(appID, guildID, cmd.ID)
 		if err != nil {
-			log.Printf("Failed to delete command %s: %v", cmd.Name, err)
+			logging.Error("Failed to delete command", "command_name", cmd.Name, "error", err)
 		} else {
 			deletedCount++
-			log.Printf("Deleted command: %s", cmd.Name)
+			logging.Info("Deleted command", "command_name", cmd.Name)
 		}
 	}
 
-	log.Printf("✅ Deleted %d/%d %s command(s)", deletedCount, len(commands), scope)
+	logging.Info("Deleted commands", "deleted_count", deletedCount, "total_count", len(commands), "scope", scope)
 }
 
 func askForConfirmation(question string) bool {

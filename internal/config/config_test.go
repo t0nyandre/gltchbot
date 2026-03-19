@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -83,5 +84,31 @@ func TestDSN(t *testing.T) {
 	got := cfg.DSN()
 	if got != expected {
 		t.Errorf("DSN() = %q; want %q", got, expected)
+	}
+}
+
+func TestRequireEnv(t *testing.T) {
+	// Ensure missing environment variable returns error
+	key := "TEST_MISSING_VAR"
+	os.Unsetenv(key)
+	_, err := requireEnv(key)
+	if err == nil {
+		t.Errorf("requireEnv(%q) expected error, got nil", key)
+	}
+	expectedMsg := fmt.Sprintf("required environment variable %q is not set", key)
+	if err.Error() != expectedMsg {
+		t.Errorf("requireEnv error message = %q; want %q", err.Error(), expectedMsg)
+	}
+
+	// Test with set variable
+	testVal := "test_value"
+	os.Setenv(key, testVal)
+	defer os.Unsetenv(key)
+	got, err := requireEnv(key)
+	if err != nil {
+		t.Errorf("requireEnv(%q) unexpected error: %v", key, err)
+	}
+	if got != testVal {
+		t.Errorf("requireEnv(%q) = %q; want %q", key, got, testVal)
 	}
 }

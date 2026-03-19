@@ -4,13 +4,14 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"log"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/t0nyandre/gltchbot/internal/api/validation"
 	"github.com/t0nyandre/gltchbot/internal/config"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 //go:embed migrations/*.sql
@@ -18,7 +19,27 @@ var migrationsFS embed.FS
 
 // New creates a new pgxpool connection pool and runs all pending migrations.
 func New(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, cfg.DSN())
+	// Parse connection string into pgxpool config
+	poolConfig, err := pgxpool.ParseConfig(cfg.DSN())
+	if err != nil {
+		return nil, fmt.Errorf("parse connection config: %w", err)
+	}
+
+	// Apply connection pool settings with bounds checking
+	maxConns32, err := validation.SafeInt32(cfg.DBMaxConns)
+	if err != nil {
+		return nil, fmt.Errorf("DBMaxConns out of range: %w", err)
+	}
+	minConns32, err := validation.SafeInt32(cfg.DBMinConns)
+	if err != nil {
+		return nil, fmt.Errorf("DBMinConns out of range: %w", err)
+	}
+	poolConfig.MaxConns = maxConns32
+	poolConfig.MinConns = minConns32
+	poolConfig.MaxConnLifetime = cfg.DBMaxConnLifetime
+	poolConfig.MaxConnIdleTime = cfg.DBMaxConnIdleTime
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("create connection pool: %w", err)
 	}
@@ -61,6 +82,6 @@ func runMigrations(cfg *config.Config) error {
 		return fmt.Errorf("apply migrations: %w", err)
 	}
 
-	log.Println("database migrations applied successfully")
+	logging.Info("database migrations applied successfully", "component", "database")
 	return nil
 }

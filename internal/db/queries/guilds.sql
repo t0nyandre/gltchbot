@@ -10,5 +10,11 @@ SELECT * FROM guilds WHERE id = $1;
 -- name: ListGuilds :many
 SELECT * FROM guilds ORDER BY created_at DESC;
 
+-- name: CountGuilds :one
+SELECT COUNT(*) FROM guilds;
+
+-- name: ListGuildsPaginated :many
+SELECT * FROM guilds ORDER BY created_at DESC LIMIT $1 OFFSET $2;
+
 -- name: DeleteGuild :exec
 DELETE FROM guilds WHERE id = $1;

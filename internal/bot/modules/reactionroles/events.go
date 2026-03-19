@@ -2,10 +2,11 @@ package reactionroles
 
 import (
 	"context"
-	"log"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/t0nyandre/gltchbot/internal/db"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 // handleReactionAdd is called when a user adds a reaction to a message.
@@ -18,20 +19,30 @@ func (m *ReactionRoles) handleReactionAdd(s *discordgo.Session, r *discordgo.Mes
 	ctx := context.Background()
 
 	// Check if module is enabled for this guild
-	enabled, err := m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
-		GuildID: r.GuildID,
-		Name:    moduleName,
-	})
+	var enabled bool
+	err := db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		enabled, innerErr = m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
+			GuildID: r.GuildID,
+			Name:    moduleName,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil || !enabled {
 		return
 	}
 
 	// Get the reaction role for this message and emoji
 	emoji := formatEmojiForStorage(r.Emoji)
-	reactionRole, err := m.queries.GetReactionRoleByMessageAndEmoji(ctx, dbsqlc.GetReactionRoleByMessageAndEmojiParams{
-		MessageID: r.MessageID,
-		Emoji:     emoji,
-	})
+	var reactionRole dbsqlc.ReactionRole
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		reactionRole, innerErr = m.queries.GetReactionRoleByMessageAndEmoji(ctx, dbsqlc.GetReactionRoleByMessageAndEmojiParams{
+			MessageID: r.MessageID,
+			Emoji:     emoji,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		// No reaction role configured for this message+emoji
 		return
@@ -40,7 +51,7 @@ func (m *ReactionRoles) handleReactionAdd(s *discordgo.Session, r *discordgo.Mes
 	// Add the role to the user
 	err = s.GuildMemberRoleAdd(r.GuildID, r.UserID, reactionRole.RoleID)
 	if err != nil {
-		log.Printf("[reactionroles] failed to add role %s to user %s: %v", reactionRole.RoleID, r.UserID, err)
+		logging.Error("failed to add role to user", "module", "reactionroles", "role_id", reactionRole.RoleID, "user_id", r.UserID, "error", err)
 		// Try to remove the reaction since we couldn't add the role
 		_ = s.MessageReactionRemove(r.ChannelID, r.MessageID, emoji, r.UserID)
 	}
@@ -56,20 +67,30 @@ func (m *ReactionRoles) handleReactionRemove(s *discordgo.Session, r *discordgo.
 	ctx := context.Background()
 
 	// Check if module is enabled for this guild
-	enabled, err := m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
-		GuildID: r.GuildID,
-		Name:    moduleName,
-	})
+	var enabled bool
+	err := db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		enabled, innerErr = m.queries.IsModuleEnabled(ctx, dbsqlc.IsModuleEnabledParams{
+			GuildID: r.GuildID,
+			Name:    moduleName,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil || !enabled {
 		return
 	}
 
 	// Get the reaction role for this message and emoji
 	emoji := formatEmojiForStorage(r.Emoji)
-	reactionRole, err := m.queries.GetReactionRoleByMessageAndEmoji(ctx, dbsqlc.GetReactionRoleByMessageAndEmojiParams{
-		MessageID: r.MessageID,
-		Emoji:     emoji,
-	})
+	var reactionRole dbsqlc.ReactionRole
+	err = db.WithRetry(ctx, func(ctx context.Context) error {
+		var innerErr error
+		reactionRole, innerErr = m.queries.GetReactionRoleByMessageAndEmoji(ctx, dbsqlc.GetReactionRoleByMessageAndEmojiParams{
+			MessageID: r.MessageID,
+			Emoji:     emoji,
+		})
+		return innerErr
+	}, db.DefaultRetryConfig())
 	if err != nil {
 		// No reaction role configured for this message+emoji
 		return
@@ -78,7 +99,7 @@ func (m *ReactionRoles) handleReactionRemove(s *discordgo.Session, r *discordgo.
 	// Remove the role from the user
 	err = s.GuildMemberRoleRemove(r.GuildID, r.UserID, reactionRole.RoleID)
 	if err != nil {
-		log.Printf("[reactionroles] failed to remove role %s from user %s: %v", reactionRole.RoleID, r.UserID, err)
+		logging.Error("failed to remove role from user", "module", "reactionroles", "role_id", reactionRole.RoleID, "user_id", r.UserID, "error", err)
 	}
 }
 

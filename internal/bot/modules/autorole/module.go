@@ -2,11 +2,11 @@ package autorole
 
 import (
 	"context"
-	"log"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgxpool"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 const moduleName = "autorole"
@@ -123,21 +123,21 @@ func (m *AutoRole) RegisterHandlers(s *discordgo.Session) {
 }
 
 // OnEnable is called when the module is enabled for a guild.
-func (m *AutoRole) OnEnable(ctx context.Context, db *pgxpool.Pool, guildID string) error {
-	log.Printf("[autorole] enabled for guild %s", guildID)
+func (m *AutoRole) OnEnable(ctx context.Context, guildID string) error {
+	logging.Info("enabled for guild", "module", "autorole", "guild_id", guildID)
 	return nil
 }
 
 // OnDisable is called when the module is disabled for a guild.
-func (m *AutoRole) OnDisable(ctx context.Context, db *pgxpool.Pool, guildID string) error {
-	log.Printf("[autorole] disabled for guild %s", guildID)
+func (m *AutoRole) OnDisable(ctx context.Context, guildID string) error {
+	logging.Info("disabled for guild", "module", "autorole", "guild_id", guildID)
 	// Clean up all auto roles and user triggers for this guild
 	if err := m.queries.DeleteAllAutoRolesForGuild(ctx, guildID); err != nil {
-		log.Printf("[autorole] failed to delete auto roles for guild %s: %v", guildID, err)
+		logging.Error("failed to delete auto roles for guild", "module", "autorole", "guild_id", guildID, "error", err)
 		return err
 	}
 	if err := m.queries.DeleteUserTriggersForGuild(ctx, guildID); err != nil {
-		log.Printf("[autorole] failed to delete user triggers for guild %s: %v", guildID, err)
+		logging.Error("failed to delete user triggers for guild", "module", "autorole", "guild_id", guildID, "error", err)
 		return err
 	}
 	return nil

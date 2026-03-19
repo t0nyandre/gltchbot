@@ -3,35 +3,45 @@ package reactionroles
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
+	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
 // logStructured logs a structured message with consistent fields
 func logStructured(level, module, operation, guildID, userID, message string, data map[string]interface{}) {
-	// Build structured log message
-	logMsg := fmt.Sprintf("[%s] module=%s operation=%s", level, module, operation)
-
+	// Build key-value pairs for structured logging
+	args := make([]any, 0)
+	args = append(args, "module", module, "operation", operation)
 	if guildID != "" {
-		logMsg += fmt.Sprintf(" guild_id=%s", guildID)
+		args = append(args, "guild_id", guildID)
 	}
 	if userID != "" {
-		logMsg += fmt.Sprintf(" user_id=%s", userID)
+		args = append(args, "user_id", userID)
 	}
 	if message != "" {
-		logMsg += fmt.Sprintf(" message=%q", message)
+		args = append(args, "message", message)
 	}
-
-	// Add data fields
 	for key, value := range data {
-		logMsg += fmt.Sprintf(" %s=%v", key, value)
+		args = append(args, key, value)
 	}
 
-	log.Println(logMsg)
+	// Call appropriate logging function based on level
+	switch strings.ToUpper(level) {
+	case "DEBUG":
+		logging.Debug(operation, args...)
+	case "INFO":
+		logging.Info(operation, args...)
+	case "WARN":
+		logging.Warn(operation, args...)
+	case "ERROR":
+		logging.Error(operation, args...)
+	default:
+		logging.Info(operation, args...)
+	}
 }
 
 // logCommandStart logs the start of a command execution
@@ -372,7 +382,7 @@ func (m *ReactionRoles) handleRemove(s *discordgo.Session, i *discordgo.Interact
 		Emoji:     emojiClean,
 	})
 	if err != nil {
-		log.Printf("[reactionroles] failed to delete reaction role: %v", err)
+		logging.Error("failed to delete reaction role", "module", "reactionroles", "error", err)
 		respondEphemeral(s, i, "❌ Failed to delete reaction role from database.")
 		return
 	}

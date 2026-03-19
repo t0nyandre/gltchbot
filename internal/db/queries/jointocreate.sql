@@ -9,6 +9,12 @@ SELECT * FROM jtc_parent_channels WHERE channel_id = $1;
 -- name: ListJTCParentChannels :many
 SELECT * FROM jtc_parent_channels WHERE guild_id = $1;
 
+-- name: CountJTCParentChannels :one
+SELECT COUNT(*) FROM jtc_parent_channels WHERE guild_id = $1;
+
+-- name: ListJTCParentChannelsPaginated :many
+SELECT * FROM jtc_parent_channels WHERE guild_id = $1 LIMIT $2 OFFSET $3;
+
 -- name: DeleteJTCParentChannel :exec
 DELETE FROM jtc_parent_channels WHERE channel_id = $1 AND guild_id = $2;
 

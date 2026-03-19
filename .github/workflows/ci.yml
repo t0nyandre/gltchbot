@@ -41,3 +41,10 @@ jobs:
 
       - name: Test
         run: go test ./...
+
+      - name: Coverage
+        run: |
+          go test ./... -coverprofile=coverage.out
+          go tool cover -func=coverage.out -o coverage.txt
+          echo "Coverage summary:"
+          cat coverage.txt
