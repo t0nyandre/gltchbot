@@ -3,6 +3,7 @@
 package pagination
 
 import (
+	"math"
 	"net/http"
 	"strconv"
 
@@ -29,7 +30,7 @@ func ParseQuery(r *http.Request) PaginationParams {
 	offset := 0
 
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if val, err := strconv.Atoi(limitStr); err == nil && val > 0 {
+		if val, err := strconv.Atoi(limitStr); err == nil && val > 0 && val <= math.MaxInt32 {
 			if val > MaxLimit {
 				limit = MaxLimit
 			} else {
@@ -39,7 +40,7 @@ func ParseQuery(r *http.Request) PaginationParams {
 	}
 
 	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
-		if val, err := strconv.Atoi(offsetStr); err == nil && val >= 0 {
+		if val, err := strconv.Atoi(offsetStr); err == nil && val >= 0 && val <= math.MaxInt32 {
 			offset = val
 		}
 	}

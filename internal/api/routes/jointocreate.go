@@ -29,7 +29,7 @@ func (h *JTCHandler) GetJTCConfig(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, "invalid guild ID: "+err.Error())
 		return
 	}
-	
+
 	// Audit log: sensitive data read
 	audit.LogEvent(r.Context(), audit.EventSensitiveDataRead, validation.SanitizeLogDetails(map[string]any{
 		"guild_id": guildID,
@@ -38,23 +38,42 @@ func (h *JTCHandler) GetJTCConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Parse pagination parameters
 	paginationParams := pagination.ParseQuery(r)
-	
+
+	// Convert pagination parameters to int32 with bounds checking
+	limit32, err := validation.SafeInt32(paginationParams.Limit)
+	if err != nil {
+		response.InternalServerError(w, "invalid pagination limit")
+		return
+	}
+	offset32, err := validation.SafeInt32(paginationParams.Offset)
+	if err != nil {
+		response.InternalServerError(w, "invalid pagination offset")
+		return
+	}
+
 	// Get total count for this guild
 	total, err := h.queries.CountJTCParentChannels(r.Context(), guildID)
 	if err != nil {
 		response.InternalServerError(w, "failed to count JTC parent channels")
 		return
 	}
-	
+
 	// Fetch paginated parent channels
-	parents, err := h.queries.ListJTCParentChannelsPaginated(r.Context(), guildID, int32(paginationParams.Limit), int32(paginationParams.Offset))
+	parents, err := h.queries.ListJTCParentChannelsPaginated(r.Context(), guildID, limit32, offset32)
 	if err != nil {
 		response.InternalServerError(w, "failed to fetch JTC config")
 		return
 	}
-	
+
+	// Convert total count to int with bounds checking
+	totalInt, err := validation.SafeInt(total)
+	if err != nil {
+		response.InternalServerError(w, "total count too large")
+		return
+	}
+
 	// Build response with pagination metadata
-	paginatedResp := pagination.NewResponse(parents, int(total), paginationParams)
+	paginatedResp := pagination.NewResponse(parents, totalInt, paginationParams)
 	// Add guild_id to the response
 	fullResp := map[string]any{
 		"guild_id":        guildID,

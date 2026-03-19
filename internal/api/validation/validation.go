@@ -3,6 +3,7 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -174,6 +175,22 @@ func ValidateInt(field string, value, min, max int) error {
 		return fmt.Errorf("%s must be between %d and %d", field, min, max)
 	}
 	return nil
+}
+
+// SafeInt32 converts int to int32, returning an error if value is out of range.
+func SafeInt32(v int) (int32, error) {
+	if v < math.MinInt32 || v > math.MaxInt32 {
+		return 0, fmt.Errorf("int value %d out of int32 range", v)
+	}
+	return int32(v), nil
+}
+
+// SafeInt converts int64 to int, returning an error if value is out of range.
+func SafeInt(v int64) (int, error) {
+	if v < math.MinInt || v > math.MaxInt {
+		return 0, fmt.Errorf("int64 value %d out of int range", v)
+	}
+	return int(v), nil
 }
 
 // ParseAndValidateDiscordID parses a string as a Discord ID and validates it.

@@ -38,15 +38,34 @@ func (h *GuildHandler) ListGuilds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Convert pagination parameters to int32 with bounds checking
+	limit32, err := validation.SafeInt32(params.Limit)
+	if err != nil {
+		response.InternalServerError(w, "invalid pagination limit")
+		return
+	}
+	offset32, err := validation.SafeInt32(params.Offset)
+	if err != nil {
+		response.InternalServerError(w, "invalid pagination offset")
+		return
+	}
+
 	// Fetch paginated guilds
-	guilds, err := h.queries.ListGuildsPaginated(r.Context(), int32(params.Limit), int32(params.Offset))
+	guilds, err := h.queries.ListGuildsPaginated(r.Context(), limit32, offset32)
 	if err != nil {
 		response.InternalServerError(w, "failed to fetch guilds")
 		return
 	}
 
+	// Convert total count to int with bounds checking
+	totalInt, err := validation.SafeInt(total)
+	if err != nil {
+		response.InternalServerError(w, "total count too large")
+		return
+	}
+
 	// Return paginated response
-	pagination.WritePaginatedResponse(w, guilds, int(total), params)
+	pagination.WritePaginatedResponse(w, guilds, totalInt, params)
 }
 
 // GetGuild returns a single guild by ID.

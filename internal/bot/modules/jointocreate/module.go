@@ -2,14 +2,15 @@ package jointocreate
 
 import (
 	"context"
+	"math"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgxpool"
-	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 	"github.com/t0nyandre/gltchbot/internal/cache"
+	dbsqlc "github.com/t0nyandre/gltchbot/internal/db/sqlc"
 	"github.com/t0nyandre/gltchbot/internal/logging"
 )
 
@@ -27,7 +28,7 @@ func New(db *pgxpool.Pool) *JoinToCreate {
 	// Read cache TTL from environment variable, default 5 minutes (300 seconds)
 	ttlSeconds := 300
 	if env := os.Getenv("CACHE_TTL_SECONDS"); env != "" {
-		if v, err := strconv.Atoi(env); err == nil && v > 0 {
+		if v, err := strconv.Atoi(env); err == nil && v > 0 && v <= math.MaxInt32 {
 			ttlSeconds = v
 		}
 	}

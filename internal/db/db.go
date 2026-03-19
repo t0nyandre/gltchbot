@@ -9,6 +9,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/t0nyandre/gltchbot/internal/api/validation"
 	"github.com/t0nyandre/gltchbot/internal/config"
 	"github.com/t0nyandre/gltchbot/internal/logging"
 )
@@ -24,9 +25,17 @@ func New(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("parse connection config: %w", err)
 	}
 
-	// Apply connection pool settings
-	poolConfig.MaxConns = int32(cfg.DBMaxConns)
-	poolConfig.MinConns = int32(cfg.DBMinConns)
+	// Apply connection pool settings with bounds checking
+	maxConns32, err := validation.SafeInt32(cfg.DBMaxConns)
+	if err != nil {
+		return nil, fmt.Errorf("DBMaxConns out of range: %w", err)
+	}
+	minConns32, err := validation.SafeInt32(cfg.DBMinConns)
+	if err != nil {
+		return nil, fmt.Errorf("DBMinConns out of range: %w", err)
+	}
+	poolConfig.MaxConns = maxConns32
+	poolConfig.MinConns = minConns32
 	poolConfig.MaxConnLifetime = cfg.DBMaxConnLifetime
 	poolConfig.MaxConnIdleTime = cfg.DBMaxConnIdleTime
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -26,22 +27,22 @@ type Config struct {
 	BotActivityText string
 
 	// Database
-	DBHost              string
-	DBPort              int
-	DBUser              string
-	DBPassword          string
-	DBName              string
-	DBSSLMode           string
-	DBMaxConns          int
-	DBMinConns          int
-	DBMaxConnLifetime   time.Duration
-	DBMaxConnIdleTime   time.Duration
+	DBHost            string
+	DBPort            int
+	DBUser            string
+	DBPassword        string
+	DBName            string
+	DBSSLMode         string
+	DBMaxConns        int
+	DBMinConns        int
+	DBMaxConnLifetime time.Duration
+	DBMaxConnIdleTime time.Duration
 
 	// API
-	APIPort int
-	APIKey  string // Deprecated: use APIKeys instead
-	APIKeys []string
-	OldAPIKeys []string
+	APIPort               int
+	APIKey                string // Deprecated: use APIKeys instead
+	APIKeys               []string
+	OldAPIKeys            []string
 	RequestSizeLimitBytes int64
 	APIRateLimitGlobal    float64
 	APIRateLimitAuth      float64
@@ -52,8 +53,8 @@ type Config struct {
 	AuditLogLevel string
 
 	// Security headers
-	SecurityHSTSMaxAge       int
-	SecurityCSP              string
+	SecurityHSTSMaxAge        int
+	SecurityCSP               string
 	SecurityPermissionsPolicy string
 
 	// CORS
@@ -61,7 +62,7 @@ type Config struct {
 	CORSAllowedMethods   string
 	CORSAllowedHeaders   string
 	CORSExposedHeaders   string
-	CORSMaxAge          int
+	CORSMaxAge           int
 	CORSAllowCredentials bool
 }
 
@@ -87,13 +88,13 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.DiscordToken = token
-	
+
 	appID, err := requireEnv("DISCORD_APP_ID")
 	if err != nil {
 		return nil, err
 	}
 	cfg.DiscordAppID = appID
-	
+
 	cfg.DiscordDevGuildID = os.Getenv("DISCORD_DEV_GUILD_ID")
 
 	// Bot presence
@@ -106,6 +107,9 @@ func Load() (*Config, error) {
 	port, err := strconv.Atoi(getEnvOrDefault("DB_PORT", "5432"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid DB_PORT: %w", err)
+	}
+	if port < 1 || port > 65535 {
+		return nil, fmt.Errorf("DB_PORT must be between 1 and 65535, got %d", port)
 	}
 	cfg.DBPort = port
 	cfg.DBUser = getEnvOrDefault("DB_USER", "gltchbot")
@@ -122,11 +126,26 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid DB_MAX_CONNS: %w", err)
 	}
+	if maxConns < 1 {
+		return nil, fmt.Errorf("DB_MAX_CONNS must be at least 1, got %d", maxConns)
+	}
+	if maxConns > math.MaxInt32 {
+		return nil, fmt.Errorf("DB_MAX_CONNS exceeds maximum allowed value %d, got %d", math.MaxInt32, maxConns)
+	}
 	cfg.DBMaxConns = maxConns
 
 	minConns, err := strconv.Atoi(getEnvOrDefault("DB_MIN_CONNS", "2"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid DB_MIN_CONNS: %w", err)
+	}
+	if minConns < 0 {
+		return nil, fmt.Errorf("DB_MIN_CONNS must be at least 0, got %d", minConns)
+	}
+	if minConns > math.MaxInt32 {
+		return nil, fmt.Errorf("DB_MIN_CONNS exceeds maximum allowed value %d, got %d", math.MaxInt32, minConns)
+	}
+	if minConns > maxConns {
+		return nil, fmt.Errorf("DB_MIN_CONNS (%d) cannot exceed DB_MAX_CONNS (%d)", minConns, maxConns)
 	}
 	cfg.DBMinConns = minConns
 
@@ -146,6 +165,9 @@ func Load() (*Config, error) {
 	apiPort, err := strconv.Atoi(getEnvOrDefault("API_PORT", "8080"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid API_PORT: %w", err)
+	}
+	if apiPort < 1 || apiPort > 65535 {
+		return nil, fmt.Errorf("API_PORT must be between 1 and 65535, got %d", apiPort)
 	}
 	cfg.APIPort = apiPort
 	apiKeyStr, err := requireEnv("API_KEY")
@@ -197,6 +219,12 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid SECURITY_HSTS_MAX_AGE: %w", err)
 	}
+	if hstsMaxAge < 0 {
+		return nil, fmt.Errorf("SECURITY_HSTS_MAX_AGE must be non-negative, got %d", hstsMaxAge)
+	}
+	if hstsMaxAge > math.MaxInt32 {
+		return nil, fmt.Errorf("SECURITY_HSTS_MAX_AGE exceeds maximum allowed value %d, got %d", math.MaxInt32, hstsMaxAge)
+	}
 	cfg.SecurityHSTSMaxAge = hstsMaxAge
 	cfg.SecurityCSP = os.Getenv("SECURITY_CSP")
 	cfg.SecurityPermissionsPolicy = os.Getenv("SECURITY_PERMISSIONS_POLICY")
@@ -209,6 +237,12 @@ func Load() (*Config, error) {
 	maxAge, err := strconv.Atoi(getEnvOrDefault("CORS_MAX_AGE", "86400"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid CORS_MAX_AGE: %w", err)
+	}
+	if maxAge < 0 {
+		return nil, fmt.Errorf("CORS_MAX_AGE must be non-negative, got %d", maxAge)
+	}
+	if maxAge > math.MaxInt32 {
+		return nil, fmt.Errorf("CORS_MAX_AGE exceeds maximum allowed value %d, got %d", math.MaxInt32, maxAge)
 	}
 	cfg.CORSMaxAge = maxAge
 	allowCredentials := getEnvOrDefault("CORS_ALLOW_CREDENTIALS", "true")
